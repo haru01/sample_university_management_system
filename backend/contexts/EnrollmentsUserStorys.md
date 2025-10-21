@@ -2,46 +2,46 @@
 
 ## 概要
 
-このドキュメントは、履修登録システムのバックエンドAPIのユーザーストーリーと受け入れ条件を定義します。
-各ストーリーにはGiven-When-Then形式の受け入れ条件（バックエンドAPI視点）と制約事項を記載しています。
+このドキュメントは、履修登録システムのユーザーストーリーと受け入れ条件を定義します。
+各ストーリーにはGiven-When-Then形式の受け入れ条件（Applicationレイヤーの統合テスト視点）と制約事項を記載しています。
 
-**対象範囲:** バックエンドREST API実装（フロントエンドUIは対象外）
+**対象範囲:** Applicationレイヤーの統合テスト（CommandHandler, QueryHandler, Repository層を含む）
 
-## APIエンドポイント一覧
+## Application Service一覧
 
 ### コース管理 (Phase 1 - 完了)
 
-| メソッド | エンドポイント | 説明 | 実装状態 |
-|---------|---------------|------|----------|
-| POST | `/api/courses` | コースを登録 | ✅ 完了 |
-| GET | `/api/courses` | コース一覧を取得 | ✅ 完了 |
-| GET | `/api/courses/{courseCode}` | コースを取得 | ✅ 完了 |
+| Command/Query | 説明 | 実装状態 |
+|--------------|------|----------|
+| CreateCourseCommand | コースを登録 | ✅ 完了 |
+| GetCoursesQuery | コース一覧を取得 | ✅ 完了 |
+| GetCourseQuery | コースを取得 | ✅ 完了 |
 
 ### 学生管理 (Phase 2 - 完了)
 
-| メソッド | エンドポイント | 説明 | 実装状態 |
-|---------|---------------|------|----------|
-| POST | `/api/students` | 学生を登録 | ✅ 完了 |
-| GET | `/api/students` | 学生一覧を取得 | ✅ 完了 |
-| GET | `/api/students/{studentId}` | 学生を取得 | ⬜ 未実装 |
-| PUT | `/api/students/{studentId}` | 学生情報を更新 | ✅ 完了 |
+| Command/Query | 説明 | 実装状態 |
+|--------------|------|----------|
+| CreateStudentCommand | 学生を登録 | ✅ 完了 |
+| GetStudentsQuery | 学生一覧を取得 | ✅ 完了 |
+| GetStudentQuery | 学生を取得 | ⬜ 未実装 |
+| UpdateStudentCommand | 学生情報を更新 | ✅ 完了 |
 
 ### 学期管理 (Phase 3 - 未実装)
 
-| メソッド | エンドポイント | 説明 | 実装状態 |
-|---------|---------------|------|----------|
-| POST | `/api/semesters` | 学期を登録 | ⬜ 未実装 |
-| GET | `/api/semesters` | 学期一覧を取得 | ⬜ 未実装 |
-| GET | `/api/semesters/current` | 現在の学期を取得 | ⬜ 未実装 |
+| Command/Query | 説明 | 実装状態 |
+|--------------|------|----------|
+| CreateSemesterCommand | 学期を登録 | ⬜ 未実装 |
+| GetSemestersQuery | 学期一覧を取得 | ⬜ 未実装 |
+| GetCurrentSemesterQuery | 現在の学期を取得 | ⬜ 未実装 |
 
 ### 履修登録 (Phase 4 - 未実装)
 
-| メソッド | エンドポイント | 説明 | 実装状態 |
-|---------|---------------|------|----------|
-| POST | `/api/enrollments` | 履修登録 | ⬜ 未実装 |
-| DELETE | `/api/enrollments/{enrollmentId}` | 履修登録キャンセル | ⬜ 未実装 |
-| GET | `/api/students/{studentId}/enrollments` | 履修登録一覧を取得 | ⬜ 未実装 |
-| PUT | `/api/enrollments/{enrollmentId}/complete` | 履修登録を完了 | ⬜ 未実装 |
+| Command/Query | 説明 | 実装状態 |
+|--------------|------|----------|
+| EnrollStudentCommand | 履修登録 | ⬜ 未実装 |
+| CancelEnrollmentCommand | 履修登録キャンセル | ⬜ 未実装 |
+| GetStudentEnrollmentsQuery | 履修登録一覧を取得 | ⬜ 未実装 |
+| CompleteEnrollmentCommand | 履修登録を完了 | ⬜ 未実装 |
 
 ---
 
