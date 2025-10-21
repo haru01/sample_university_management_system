@@ -391,91 +391,53 @@ Scenario: 学生が1件も登録されていない場合
 
 ## エピック3: 学期管理
 
-### ⬜ US-M01: POST /api/semesters - 学期情報を管理できる
+### ⬜ US-M01: 学期情報を管理できる
 
 **ストーリー:**
-API利用者として、学期情報（年度、学期、期間）を管理できるようにしたい。なぜなら、履修登録は学期ごとに管理される必要があるから。
+管理者として、学期情報（年度、学期、期間）を管理できるようにしたい。なぜなら、履修登録は学期ごとに管理される必要があるから。
 
-**エンドポイント:** `POST /api/semesters`
+**Application Service:** `CreateSemesterCommandHandler`
 
 **受け入れ条件:**
 
 ```gherkin
 Scenario: 新しい学期を登録する
-  Given データベースが利用可能である
-  When 以下のJSONボディでPOSTリクエストを送信する
-    """
-    {
-      "year": 2024,
-      "period": "Spring",
-      "startDate": "2024-04-01",
-      "endDate": "2024-09-30"
-    }
-    """
-  Then HTTPステータスコード 201 Created が返される
-  And レスポンスボディに学期IDが含まれる
-    """
-    {
-      "year": 2024,
-      "period": "Spring"
-    }
-    """
-  And データベースに学期が保存されている
+  Given SemesterRepositoryが利用可能である
+  When CreateSemesterCommandを実行する
+    - Year: 2024
+    - Period: Spring
+    - StartDate: 2024-04-01
+    - EndDate: 2024-09-30
+  Then Semesterエンティティが作成される
+  And SemesterRepositoryに保存される
+  And SemesterId (2024, Spring) が返される
 ```
 
 ```gherkin
 Scenario: 重複する学期を登録しようとする
-  Given データベースに 2024年度 Spring学期 が既に登録されている
-  When 同じ年度・学期でPOSTリクエストを送信する
-  Then HTTPステータスコード 409 Conflict が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "Semester already exists"
-    }
-    """
+  Given SemesterRepositoryに (2024, Spring) の学期が既に存在する
+  When 同じYear, PeriodでCreateSemesterCommandを実行する
+  Then DomainException "Semester already exists" がスローされる
+  And SemesterRepositoryに保存されない
 ```
 
 ```gherkin
 Scenario: 不正な学期期間で登録を試みる
-  Given データベースが利用可能である
-  When 以下のJSONボディでPOSTリクエストを送信する
-    """
-    {
-      "year": 2024,
-      "period": "InvalidPeriod",
-      "startDate": "2024-04-01",
-      "endDate": "2024-09-30"
-    }
-    """
-  Then HTTPステータスコード 400 Bad Request が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "Invalid semester period. Must be Spring or Fall"
-    }
-    """
+  Given SemesterRepositoryが利用可能である
+  When CreateSemesterCommandを実行する
+    - Year: 2024
+    - Period: "InvalidPeriod"
+  Then ArgumentException "Invalid semester period. Must be Spring or Fall" がスローされる
 ```
 
 ```gherkin
 Scenario: 終了日が開始日より前の学期を登録しようとする
-  Given データベースが利用可能である
-  When 以下のJSONボディでPOSTリクエストを送信する
-    """
-    {
-      "year": 2024,
-      "period": "Spring",
-      "startDate": "2024-09-30",
-      "endDate": "2024-04-01"
-    }
-    """
-  Then HTTPステータスコード 400 Bad Request が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "End date must be after start date"
-    }
-    """
+  Given SemesterRepositoryが利用可能である
+  When CreateSemesterCommandを実行する
+    - StartDate: 2024-09-30
+    - EndDate: 2024-04-01
+  Then DomainException "End date must be after start date" がスローされる
+  And SemesterRepositoryに保存されない
 ```
 
 **制約:**
@@ -489,106 +451,87 @@ Scenario: 終了日が開始日より前の学期を登録しようとする
 
 ---
 
-### ⬜ US-M02: GET /api/semesters - 学期一覧を取得できる
+### ⬜ US-M02: 学期一覧を取得できる
 
 **ストーリー:**
-API利用者として、登録されている学期の一覧を取得できるようにしたい。なぜなら、履修登録時に選択可能な学期を表示する必要があるから。
+学生・教員として、登録されている学期の一覧を取得できるようにしたい。なぜなら、履修登録時に選択可能な学期を表示する必要があるから。
 
-**エンドポイント:** `GET /api/semesters`
+**Application Service:** `GetSemestersQueryHandler`
 
 **受け入れ条件:**
 
 ```gherkin
 Scenario: 全学期を取得する
-  Given データベースに以下の学期が登録されている
-    | 年度 | 学期   | 開始日     | 終了日     |
+  Given SemesterRepositoryに以下のSemesterが存在する
+    | Year | Period | StartDate  | EndDate    |
     | 2024 | Spring | 2024-04-01 | 2024-09-30 |
     | 2024 | Fall   | 2024-10-01 | 2025-03-31 |
     | 2023 | Fall   | 2023-10-01 | 2024-03-31 |
-  When GET /api/semesters にリクエストを送信する
-  Then HTTPステータスコード 200 OK が返される
-  And レスポンスボディに3件の学期が含まれる
-  And 年度・学期の降順でソートされている（最新が先頭）
+  When GetSemestersQueryを実行する
+  Then 3件のSemesterDtoが返される
+  And Yearの降順、Periodの降順でソートされている（最新が先頭）
 ```
 
 ```gherkin
 Scenario: 現在の学期のみを取得する
-  Given データベースに複数の学期が登録されている
+  Given SemesterRepositoryに複数のSemesterが存在する
   And 現在日時が 2024-05-15 である
-  When GET /api/semesters?current=true にリクエストを送信する
-  Then HTTPステータスコード 200 OK が返される
-  And 2024年Spring学期のみが返される
-  And 開始日 <= 現在日時 <= 終了日 を満たす
+  When GetSemestersQueryを実行する
+    - CurrentOnly: true
+  Then 2024年SpringのSemesterDtoのみが返される
+  And StartDate <= 現在日時 <= EndDate を満たす
 ```
 
 ```gherkin
 Scenario: 学期が1件も登録されていない場合
-  Given データベースに学期が登録されていない
-  When GET /api/semesters にリクエストを送信する
-  Then HTTPステータスコード 200 OK が返される
-  And レスポンスボディに空の配列が含まれる
-    """
-    []
-    """
+  Given SemesterRepositoryにSemesterが存在しない
+  When GetSemestersQueryを実行する
+  Then 空のリストが返される
 ```
 
 **制約:**
 
 - デフォルトソート: 年度・学期の降順（最新が先頭）
-- `current=true`パラメータで現在の学期のみフィルタリング可能
+- `CurrentOnly`パラメータで現在の学期のみフィルタリング可能
 
 **実装状態:** ⬜ 未実装
 
 ---
 
-### ⬜ US-M03: GET /api/semesters/current - 現在の学期を取得できる
+### ⬜ US-M03: 現在の学期を取得できる
 
 **ストーリー:**
-API利用者として、現在の学期情報を簡単に取得できるようにしたい。なぜなら、履修登録画面で現在の学期を表示する必要があるから。
+学生・教員として、現在の学期情報を簡単に取得できるようにしたい。なぜなら、履修登録画面で現在の学期を表示する必要があるから。
 
-**エンドポイント:** `GET /api/semesters/current`
+**Application Service:** `GetCurrentSemesterQueryHandler`
 
 **受け入れ条件:**
 
 ```gherkin
 Scenario: 現在の学期を取得する
-  Given データベースに以下の学期が登録されている
-    | 年度 | 学期   | 開始日     | 終了日     |
+  Given SemesterRepositoryに以下のSemesterが存在する
+    | Year | Period | StartDate  | EndDate    |
     | 2024 | Spring | 2024-04-01 | 2024-09-30 |
     | 2024 | Fall   | 2024-10-01 | 2025-03-31 |
   And 現在日時が 2024-05-15 である
-  When GET /api/semesters/current にリクエストを送信する
-  Then HTTPステータスコード 200 OK が返される
-  And レスポンスボディに2024年Spring学期が含まれる
-    """
-    {
-      "year": 2024,
-      "period": "Spring",
-      "startDate": "2024-04-01",
-      "endDate": "2024-09-30",
-      "isEnrollmentPeriod": true
-    }
-    """
+  When GetCurrentSemesterQueryを実行する
+  Then SemesterDtoが返される
+  And Yearが2024である
+  And PeriodがSpringである
 ```
 
 ```gherkin
 Scenario: 現在の学期が存在しない場合
-  Given データベースに学期が登録されている
-  And 現在日時がどの学期の期間にも含まれない
-  When GET /api/semesters/current にリクエストを送信する
-  Then HTTPステータスコード 404 Not Found が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "No current semester found"
-    }
-    """
+  Given SemesterRepositoryにSemesterが存在する
+  And 現在日時がどのSemesterの期間にも含まれない
+  When GetCurrentSemesterQueryを実行する
+  Then NotFoundException "No current semester found" がスローされる
 ```
 
 **制約:**
 
 - 現在日時が開始日〜終了日の範囲内の学期を返す
-- 該当する学期が存在しない場合は404
+- 該当する学期が存在しない場合はNotFoundException
 
 **実装状態:** ⬜ 未実装
 
@@ -731,88 +674,52 @@ Scenario: 存在しない履修登録IDでキャンセルを試みる
 
 ---
 
-### ⬜ US-R03: GET /api/students/{studentId}/enrollments - 履修登録一覧を取得できる
+### ⬜ US-R03: 履修登録一覧を取得できる
 
 **ストーリー:**
-API利用者として、学生の履修登録一覧を取得できるようにしたい。なぜなら、現在の履修状況を確認する必要があるから。
+学生・教員として、学生の履修登録一覧を取得できるようにしたい。なぜなら、現在の履修状況を確認する必要があるから。
 
-**エンドポイント:** `GET /api/students/{studentId}/enrollments`
+**Application Service:** `GetStudentEnrollmentsQueryHandler`
 
 **受け入れ条件:**
 
 ```gherkin
 Scenario: 学生の全ての履修登録を取得する
-  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
-  And 以下の履修登録が存在する
-    | コースコード | コース名       | 学期        | ステータス |
-    | CS101        | プログラミング入門 | 2024 Spring | InProgress |
-    | MATH201      | 線形代数       | 2024 Spring | InProgress |
-    | ENG101       | 英語I         | 2023 Fall   | Completed  |
-  When GET /api/students/123e4567-e89b-12d3-a456-426614174000/enrollments にリクエストを送信する
-  Then HTTPステータスコード 200 OK が返される
-  And レスポンスボディに3件の履修登録が含まれる
-    """
-    [
-      {
-        "enrollmentId": "enr-001",
-        "courseCode": "CS101",
-        "courseName": "プログラミング入門",
-        "semesterYear": 2024,
-        "semesterPeriod": "Spring",
-        "status": "InProgress"
-      },
-      {
-        "enrollmentId": "enr-002",
-        "courseCode": "MATH201",
-        "courseName": "線形代数",
-        "semesterYear": 2024,
-        "semesterPeriod": "Spring",
-        "status": "InProgress"
-      },
-      {
-        "enrollmentId": "enr-003",
-        "courseCode": "ENG101",
-        "courseName": "英語I",
-        "semesterYear": 2023,
-        "semesterPeriod": "Fall",
-        "status": "Completed"
-      }
-    ]
-    """
-  And 学期の新しい順にソートされている
+  Given StudentRepositoryにStudentId "student-001" が存在する
+  And EnrollmentRepositoryに以下のEnrollmentが存在する
+    | CourseCode | SemesterId      | Status     |
+    | CS101      | (2024, Spring)  | InProgress |
+    | MATH201    | (2024, Spring)  | InProgress |
+    | ENG101     | (2023, Fall)    | Completed  |
+  When GetStudentEnrollmentsQueryを実行する
+    - StudentId: "student-001"
+  Then 3件のEnrollmentDtoが返される
+  And Semesterの新しい順にソートされている
 ```
 
 ```gherkin
 Scenario: ステータスでフィルタリングして履修登録を取得する
-  Given 学生に複数の履修登録が存在する
-  When GET /api/students/123e4567-e89b-12d3-a456-426614174000/enrollments?status=InProgress にリクエストを送信する
-  Then HTTPステータスコード 200 OK が返される
-  And レスポンスボディに InProgress ステータスの履修登録のみが含まれる
+  Given Studentに複数のEnrollmentが存在する
+  When GetStudentEnrollmentsQueryを実行する
+    - StudentId: "student-001"
+    - StatusFilter: InProgress
+  Then StatusがInProgressのEnrollmentDtoのみが返される
 ```
 
 ```gherkin
 Scenario: 履修登録が存在しない学生の一覧を取得する
-  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
-  And この学生には履修登録が存在しない
-  When GET /api/students/123e4567-e89b-12d3-a456-426614174000/enrollments にリクエストを送信する
-  Then HTTPステータスコード 200 OK が返される
-  And レスポンスボディに空の配列が含まれる
-    """
-    []
-    """
+  Given StudentRepositoryにStudentId "student-001" が存在する
+  And EnrollmentRepositoryにこのStudentのEnrollmentが存在しない
+  When GetStudentEnrollmentsQueryを実行する
+    - StudentId: "student-001"
+  Then 空のリストが返される
 ```
 
 ```gherkin
 Scenario: 存在しない学生IDで一覧を取得しようとする
-  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が存在しない
-  When GET /api/students/99999999-9999-9999-9999-999999999999/enrollments にリクエストを送信する
-  Then HTTPステータスコード 404 Not Found が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "Student not found"
-    }
-    """
+  Given StudentRepositoryにStudentId "student-999" が存在しない
+  When StudentId "student-999" でGetStudentEnrollmentsQueryを実行する
+  Then NotFoundException "Student not found" がスローされる
 ```
 
 **制約:**
@@ -825,66 +732,49 @@ Scenario: 存在しない学生IDで一覧を取得しようとする
 
 ---
 
-### ⬜ US-R04: PUT /api/enrollments/{enrollmentId}/complete - 履修登録を完了できる
+### ⬜ US-R04: 履修登録を完了できる
 
 **ストーリー:**
-API利用者として、学期終了時に履修登録ステータスを完了にできるようにしたい。なぜなら、成績評価に移行するためには履修登録を完了状態にする必要があるから。
+教員・管理者として、学期終了時に履修登録ステータスを完了にできるようにしたい。なぜなら、成績評価に移行するためには履修登録を完了状態にする必要があるから。
 
-**エンドポイント:** `PUT /api/enrollments/{enrollmentId}/complete`
+**Application Service:** `CompleteEnrollmentCommandHandler`
 
 **受け入れ条件:**
 
 ```gherkin
 Scenario: 進行中の履修登録を完了する
-  Given データベースに履修登録ID "abc-123" の履修登録が存在する
-  And 履修登録ステータスが "InProgress" である
-  When PUT /api/enrollments/abc-123/complete にリクエストを送信する
-  Then HTTPステータスコード 204 No Content が返される
-  And データベースの履修登録ステータスが "Completed" になる
-  And 完了日時が記録される
+  Given EnrollmentRepositoryにEnrollmentId "enrollment-001" が存在する
+  And EnrollmentのStatusがInProgressである
+  When CompleteEnrollmentCommandを実行する
+    - EnrollmentId: "enrollment-001"
+  Then EnrollmentのStatusがCompletedに更新される
+  And CompletedAtが記録される
+  And EnrollmentRepositoryに保存される
 ```
 
 ```gherkin
 Scenario: 既に完了している履修登録を再度完了しようとする
-  Given データベースに履修登録ID "abc-123" の履修登録が存在する
-  And 履修登録ステータスが "Completed" である
-  When PUT /api/enrollments/abc-123/complete にリクエストを送信する
-  Then HTTPステータスコード 400 Bad Request が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "Already completed"
-    }
-    """
-  And ステータスは変更されない
+  Given EnrollmentRepositoryにEnrollmentId "enrollment-001" が存在する
+  And EnrollmentのStatusがCompletedである
+  When CompleteEnrollmentCommandを実行する
+  Then DomainException "Already completed" がスローされる
+  And Statusは変更されない
 ```
 
 ```gherkin
 Scenario: キャンセル済みの履修登録を完了しようとする
-  Given データベースに履修登録ID "abc-123" の履修登録が存在する
-  And 履修登録ステータスが "Cancelled" である
-  When PUT /api/enrollments/abc-123/complete にリクエストを送信する
-  Then HTTPステータスコード 400 Bad Request が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "Cannot complete cancelled enrollment"
-    }
-    """
-  And ステータスは変更されない
+  Given EnrollmentRepositoryにEnrollmentId "enrollment-001" が存在する
+  And EnrollmentのStatusがCancelledである
+  When CompleteEnrollmentCommandを実行する
+  Then DomainException "Cannot complete cancelled enrollment" がスローされる
+  And Statusは変更されない
 ```
 
 ```gherkin
 Scenario: 存在しない履修登録IDで完了を試みる
-  Given データベースに履修登録ID "99999999" の履修登録が存在しない
-  When PUT /api/enrollments/99999999/complete にリクエストを送信する
-  Then HTTPステータスコード 404 Not Found が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "Enrollment not found"
-    }
-    """
+  Given EnrollmentRepositoryにEnrollmentId "enrollment-999" が存在しない
+  When EnrollmentId "enrollment-999" でCompleteEnrollmentCommandを実行する
+  Then NotFoundException "Enrollment not found" がスローされる
 ```
 
 **制約:**
@@ -892,83 +782,6 @@ Scenario: 存在しない履修登録IDで完了を試みる
 - 完了可能なステータス: InProgress のみ
 - Completed または Cancelled からの完了は不可
 - 完了日時を自動記録
-
-**実装状態:** ⬜ 未実装
-
----
-
-## エピック4: 学期管理
-
-### ⬜ US-M01: POST /api/semesters - 学期情報を管理できる
-
-**ストーリー:**
-API利用者として、学期情報（年度、学期、期間）を管理できるようにしたい。なぜなら、履修登録は学期ごとに管理される必要があるから。
-
-**エンドポイント:** `POST /api/semesters`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 新しい学期を登録する
-  Given データベースが利用可能である
-  When 以下のJSONボディでPOSTリクエストを送信する
-    """
-    {
-      "year": 2024,
-      "period": "Spring",
-      "startDate": "2024-04-01",
-      "endDate": "2024-09-30"
-    }
-    """
-  Then HTTPステータスコード 201 Created が返される
-  And レスポンスボディに学期IDが含まれる
-    """
-    {
-      "semesterId": "sem-2024-spring"
-    }
-    """
-  And データベースに学期が保存されている
-```
-
-```gherkin
-Scenario: 重複する学期を登録しようとする
-  Given データベースに 2024年度 Spring学期 が既に登録されている
-  When 同じ年度・学期でPOSTリクエストを送信する
-  Then HTTPステータスコード 409 Conflict が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "Semester already exists"
-    }
-    """
-```
-
-```gherkin
-Scenario: 不正な学期期間で登録を試みる
-  Given データベースが利用可能である
-  When 以下のJSONボディでPOSTリクエストを送信する
-    """
-    {
-      "year": 2024,
-      "period": "InvalidPeriod",
-      "startDate": "2024-04-01",
-      "endDate": "2024-09-30"
-    }
-    """
-  Then HTTPステータスコード 400 Bad Request が返される
-  And レスポンスボディにエラーメッセージが含まれる
-    """
-    {
-      "error": "Invalid semester period. Must be Spring or Fall"
-    }
-    """
-```
-
-**制約:**
-
-- 学期: Spring または Fall
-- 年度: 2000〜2100の範囲
-- 同じ年度・学期の組み合わせは一意
 
 **実装状態:** ⬜ 未実装
 

@@ -341,43 +341,26 @@ Scenario: 学生の学期成績一覧を取得する
 
 #### US-G09: 学生の累積GPAを計算する
 
-**As a** 学生または教職員
-**I want to** 学生の累積GPAを確認できる
-**So that** 学業成績の総合評価を把握できる
+**ストーリー:**
+学生または教職員として、学生の累積GPAを確認できるようにしたい。なぜなら、学業成績の総合評価を把握する必要があるから。
 
-**API仕様**:
-```http
-GET /api/gpa?studentId=323e4567-e89b-12d3-a456-426614174000
-```
+**Application Service:** `CalculateStudentGpaQueryHandler`
 
-**Response**:
-```json
-{
-  "studentId": "323e4567-e89b-12d3-a456-426614174000",
-  "cumulativeGpa": 3.45,
-  "totalCreditsEarned": 45,
-  "totalCreditsTaken": 48,
-  "semesterGpas": [
-    {
-      "semesterId": {
-        "year": 2024,
-        "period": "Spring"
-      },
-      "gpa": 3.5,
-      "creditsEarned": 7,
-      "creditsTaken": 7
-    },
-    {
-      "semesterId": {
-        "year": 2023,
-        "period": "Fall"
-      },
-      "gpa": 3.4,
-      "creditsEarned": 14,
-      "creditsTaken": 15
-    }
-  ]
-}
+**受け入れ基準:**
+
+```gherkin
+Scenario: 学生の累積GPAを計算する
+  Given GradeRepositoryにStudentId "student-001" の複数学期のGradeが存在する
+    | SemesterId     | CourseCode | Credits | LetterGrade |
+    | (2024, Spring) | CS101      | 3       | B           |
+    | (2024, Spring) | MATH201    | 4       | A           |
+    | (2023, Fall)   | ENG101     | 3       | C           |
+  When CalculateStudentGpaQueryを実行する
+    - StudentId: "student-001"
+  Then GpaDtoが返される
+  And CumulativeGpaが計算されている
+  And SemesterGpasが2件含まれる
+  And TotalCreditsEarnedが10である
 ```
 
 **Domain Rules**:
@@ -390,56 +373,39 @@ GET /api/gpa?studentId=323e4567-e89b-12d3-a456-426614174000
 
 #### US-G10: 成績証明書を発行する
 
-**As a** 学生
-**I want to** 成績証明書を発行できる
-**So that** 就職活動や進学に使用できる
+**ストーリー:**
+学生として、成績証明書を発行できるようにしたい。なぜなら、就職活動や進学に使用する必要があるから。
 
-**API仕様**:
-```http
-POST /api/transcripts
-Content-Type: application/json
+**Application Service:** `IssueTranscriptCommandHandler`
 
-{
-  "studentId": "323e4567-e89b-12d3-a456-426614174000",
-  "includeInProgress": false,
-  "language": "ja"
-}
+**受け入れ基準:**
+
+```gherkin
+Scenario: 成績証明書を発行する
+  Given StudentRepositoryにStudentId "student-001" が存在する
+  And GradeRepositoryにこのStudentのFinalizedなGradeが複数存在する
+  When IssueTranscriptCommandを実行する
+    - StudentId: "student-001"
+    - IncludeInProgress: false
+    - Language: "ja"
+  Then Transcriptエンティティが作成される
+  And TranscriptRepositoryに保存される
+  And TranscriptIdが返される
+  And CumulativeGpaが計算されている
+  And Finalizedの成績のみが含まれる
 ```
 
-**Response**:
-```json
-{
-  "transcriptId": "723e4567-e89b-12d3-a456-426614174000",
-  "studentId": "323e4567-e89b-12d3-a456-426614174000",
-  "studentName": "山田太郎",
-  "studentEmail": "yamada@example.com",
-  "issuedAt": "2024-07-20T10:00:00Z",
-  "cumulativeGpa": 3.45,
-  "totalCreditsEarned": 45,
-  "semesters": [
-    {
-      "semesterId": {
-        "year": 2024,
-        "period": "Spring"
-      },
-      "courses": [
-        {
-          "courseCode": "CS101",
-          "courseName": "Introduction to Computer Science",
-          "credits": 3,
-          "letterGrade": "B",
-          "status": "Finalized"
-        }
-      ],
-      "semesterGpa": 3.5
-    }
-  ],
-  "pdfUrl": "/api/transcripts/723e4567-e89b-12d3-a456-426614174000/pdf"
-}
+```gherkin
+Scenario: 進行中の成績を含めて発行する
+  Given StudentにFinalizedとCalculatedのGradeが存在する
+  When IssueTranscriptCommandを実行する
+    - StudentId: "student-001"
+    - IncludeInProgress: true
+  Then FinalizedとCalculatedの成績が両方含まれる
 ```
 
 **Domain Rules**:
-- 成績証明書には確定済み（Finalized）の成績のみ含む
+- 成績証明書には確定済み（Finalized）の成績のみ含む（デフォルト）
 - 学生情報、履修コース、成績、GPAを含む
 - PDF形式でダウンロード可能
 - 発行履歴を記録
