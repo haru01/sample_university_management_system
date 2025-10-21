@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # PostgreSQLデータベース
+  postgres:
+    image: postgres:16-alpine
+    container_name: university_postgres
+    environment:
+      POSTGRES_DB: university_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - university_network
+
+  # Flywayマイグレーション
+  flyway:
+    image: flyway/flyway:10-alpine
+    container_name: university_flyway
+    command: migrate
+    volumes:
+      - ./src/Enrollments/Infrastructure/Persistence/Migrations:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/university_management
+      FLYWAY_USER: postgres
+      FLYWAY_PASSWORD: postgres
+      FLYWAY_SCHEMAS: courses
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_VALIDATE_ON_MIGRATE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - university_network
+
+  # .NET APIアプリケーション
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: university_api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__CoursesDb: "Host=postgres;Port=5432;Database=university_management;Username=postgres;Password=postgres"
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+    networks:
+      - university_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  university_network:
+    driver: bridge

@@ -1,0 +1,67 @@
+@Enrollments.Api_HostAddress = http://localhost:5062
+
+### コース一覧取得
+GET {{Enrollments.Api_HostAddress}}/api/courses
+Accept: application/json
+
+###
+
+### 学生登録（成功ケース）
+POST {{Enrollments.Api_HostAddress}}/api/students
+Content-Type: application/json
+
+{
+    "name": "山田太郎",
+    "email": "yamada@example.com",
+    "grade": 1
+}
+
+###
+
+### 学生登録（メール形式エラー）
+POST {{Enrollments.Api_HostAddress}}/api/students
+Content-Type: application/json
+
+{
+    "name": "山田太郎",
+    "email": "invalid-email",
+    "grade": 1
+}
+
+###
+
+### 学生登録（重複メールエラー）
+POST {{Enrollments.Api_HostAddress}}/api/students
+Content-Type: application/json
+
+{
+    "name": "山田太郎",
+    "email": "yamada@example.com",
+    "grade": 1
+}
+
+###
+
+### 学生情報更新（成功ケース）
+PUT {{Enrollments.Api_HostAddress}}/api/students/123e4567-e89b-12d3-a456-426614174000
+Content-Type: application/json
+
+{
+    "name": "山田太郎",
+    "email": "new@example.com",
+    "grade": 2
+}
+
+###
+
+### 学生情報更新（存在しない学生ID）
+PUT {{Enrollments.Api_HostAddress}}/api/students/99999999-9999-9999-9999-999999999999
+Content-Type: application/json
+
+{
+    "name": "山田太郎",
+    "email": "new@example.com",
+    "grade": 2
+}
+
+###
