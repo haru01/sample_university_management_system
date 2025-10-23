@@ -1,5 +1,6 @@
 using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.StudentAggregate;
+using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ public class CoursesDbContext : DbContext
 {
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<Student> Students => Set<Student>();
+    public DbSet<Semester> Semesters => Set<Semester>();
 
     public CoursesDbContext(DbContextOptions<CoursesDbContext> options)
         : base(options)
@@ -22,5 +24,6 @@ public class CoursesDbContext : DbContext
         // Entity Configuration適用
         modelBuilder.ApplyConfiguration(new CourseConfiguration());
         modelBuilder.ApplyConfiguration(new StudentConfiguration());
+        modelBuilder.ApplyConfiguration(new SemesterConfiguration());
     }
 }
