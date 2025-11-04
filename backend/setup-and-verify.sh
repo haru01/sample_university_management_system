@@ -158,6 +158,94 @@ else
 fi
 echo ""
 
+# Student作成テスト
+echo -e "${CYAN}[7] POST /api/students (サンプルデータ作成)${NC}"
+student_create_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/students \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Taro Yamada",
+    "email": "taro.yamada@example.com",
+    "grade": 1
+  }')
+
+student_create_status=$(echo "$student_create_response" | tail -n 1)
+student_create_body=$(echo "$student_create_response" | sed '$d')
+
+if [ "$student_create_status" = "201" ] || [ "$student_create_status" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $student_create_status - Studentを作成しました${NC}"
+    student_id=$(echo "$student_create_body" | jq -r '.studentId' 2>/dev/null)
+    if [ -n "$student_id" ] && [ "$student_id" != "null" ]; then
+        echo "Student ID: $student_id"
+    fi
+else
+    echo -e "${YELLOW}⚠ HTTP $student_create_status${NC}"
+    echo -e "${CYAN}※ 既にデータが存在する場合は正常です${NC}"
+fi
+echo ""
+
+# 作成したStudentの取得確認
+if [ -n "$student_id" ] && [ "$student_id" != "null" ]; then
+    echo -e "${CYAN}[8] GET /api/students/{id} (作成したStudentを取得)${NC}"
+    get_student_response=$(curl -s -w "\n%{http_code}" http://localhost:8080/api/students/$student_id)
+    get_student_status=$(echo "$get_student_response" | tail -n 1)
+
+    if [ "$get_student_status" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $get_student_status${NC}"
+        echo "$get_student_response" | sed '$d' | jq '.' 2>/dev/null
+    else
+        echo -e "${RED}✗ HTTP $get_student_status${NC}"
+    fi
+    echo ""
+
+    # Student更新テスト
+    echo -e "${CYAN}[9] PUT /api/students/{id} (Student情報を更新)${NC}"
+    update_student_response=$(curl -s -w "\n%{http_code}" -X PUT http://localhost:8080/api/students/$student_id \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Taro Yamada",
+        "email": "taro.yamada.updated@example.com",
+        "grade": 2
+      }')
+
+    update_student_status=$(echo "$update_student_response" | tail -n 1)
+
+    if [ "$update_student_status" = "200" ] || [ "$update_student_status" = "204" ]; then
+        echo -e "${GREEN}✓ HTTP $update_student_status - Student情報を更新しました${NC}"
+    else
+        echo -e "${RED}✗ HTTP $update_student_status${NC}"
+    fi
+    echo ""
+fi
+
+# Courseコードで取得テスト
+echo -e "${CYAN}[10] GET /api/courses/{code} (作成したCourseを取得)${NC}"
+get_course_response=$(curl -s -w "\n%{http_code}" http://localhost:8080/api/courses/CS101)
+get_course_status=$(echo "$get_course_response" | tail -n 1)
+
+if [ "$get_course_status" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $get_course_status${NC}"
+    echo "$get_course_response" | sed '$d' | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ HTTP $get_course_status${NC}"
+fi
+echo ""
+
+# 現在の学期取得テスト
+echo -e "${CYAN}[11] GET /api/semesters/current (現在の学期を取得)${NC}"
+current_semester_response=$(curl -s -w "\n%{http_code}" http://localhost:8080/api/semesters/current)
+current_semester_status=$(echo "$current_semester_response" | tail -n 1)
+
+if [ "$current_semester_status" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $current_semester_status${NC}"
+    echo "$current_semester_response" | sed '$d' | jq '.' 2>/dev/null
+elif [ "$current_semester_status" = "404" ]; then
+    echo -e "${YELLOW}⚠ HTTP $current_semester_status - 現在の学期が見つかりません${NC}"
+    echo -e "${CYAN}※ テストデータの日付範囲外の場合は正常です${NC}"
+else
+    echo -e "${RED}✗ HTTP $current_semester_status${NC}"
+fi
+echo ""
+
 # ========================================
 # 完了サマリー
 # ========================================
