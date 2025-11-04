@@ -16,6 +16,11 @@ public interface ISemesterRepository
     Task<List<Semester>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 現在の学期を取得（現在日時が開始日と終了日の間にある学期）
+    /// </summary>
+    Task<Semester?> GetCurrentSemesterAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 学期を追加
     /// </summary>
     Task AddAsync(Semester semester, CancellationToken cancellationToken = default);

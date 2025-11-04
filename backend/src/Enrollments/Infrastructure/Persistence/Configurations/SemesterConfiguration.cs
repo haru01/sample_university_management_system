@@ -10,16 +10,21 @@ public class SemesterConfiguration : IEntityTypeConfiguration<Semester>
     {
         builder.ToTable("semesters");
 
-        // 複合主キー（SemesterId）
-        builder.HasKey(s => s.Id);
-
-        // SemesterIdの変換（年度と期間を個別のカラムにマッピング）
-        builder.Property(s => s.Id)
-            .HasConversion(
-                v => v.Year + "|" + v.Period, // DBに保存する形式
-                v => CreateSemesterId(v))
-            .HasColumnName("id")
+        // バッキングフィールドを使用して複合キーをマッピング
+        builder.Property("_idYear")
+            .HasColumnName("id_year")
             .IsRequired();
+
+        builder.Property("_idPeriod")
+            .HasColumnName("id_period")
+            .HasMaxLength(20)
+            .IsRequired();
+
+        // 複合主キー定義
+        builder.HasKey("_idYear", "_idPeriod");
+
+        // Idプロパティ - 読み取り専用としてマッピング（バッキングフィールドから計算）
+        builder.Ignore(s => s.Id);
 
         // その他のプロパティ
         builder.Property(s => s.StartDate)
@@ -32,11 +37,5 @@ public class SemesterConfiguration : IEntityTypeConfiguration<Semester>
 
         // ドメインイベントは永続化しない
         builder.Ignore(s => s.DomainEvents);
-    }
-
-    private static SemesterId CreateSemesterId(string value)
-    {
-        var parts = value.Split('|');
-        return new SemesterId(int.Parse(parts[0]), parts[1]);
     }
 }

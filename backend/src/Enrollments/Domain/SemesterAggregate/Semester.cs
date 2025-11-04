@@ -8,6 +8,13 @@ namespace Enrollments.Domain.SemesterAggregate;
 /// </summary>
 public class Semester : AggregateRoot<SemesterId>
 {
+    // EF Core用バッキングフィールド
+    private int _idYear;
+    private string _idPeriod = string.Empty;
+
+    // Idプロパティをオーバーライドしてバッキングフィールドから再構築
+    public new SemesterId Id => new(_idYear, _idPeriod);
+
     public DateTime StartDate { get; private set; }
     public DateTime EndDate { get; private set; }
 
@@ -19,6 +26,8 @@ public class Semester : AggregateRoot<SemesterId>
     private Semester(SemesterId id, DateTime startDate, DateTime endDate)
         : base(id)
     {
+        _idYear = id.Year;
+        _idPeriod = id.Period;
         StartDate = startDate;
         EndDate = endDate;
     }

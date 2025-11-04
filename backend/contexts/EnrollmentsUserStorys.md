@@ -28,13 +28,13 @@
 | GetStudentQueryHandler | GetStudentQuery | 学生を取得 | ✅ 完了 |
 | UpdateStudentCommandHandler | UpdateStudentCommand | 学生情報を更新 | ✅ 完了 |
 
-### 学期管理 (Phase 3 - 未実装)
+### 学期管理 (Phase 3 - 完了)
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
-| CreateSemesterCommandHandler | CreateSemesterCommand | 学期を登録 | ⬜ 未実装 |
-| GetSemestersQueryHandler | GetSemestersQuery | 学期一覧を取得 | ⬜ 未実装 |
-| GetCurrentSemesterQueryHandler | GetCurrentSemesterQuery | 現在の学期を取得 | ⬜ 未実装 |
+| CreateSemesterCommandHandler | CreateSemesterCommand | 学期を登録 | ✅ 完了 |
+| GetSemestersQueryHandler | GetSemestersQuery | 学期一覧を取得 | ✅ 完了 |
+| GetCurrentSemesterQueryHandler | GetCurrentSemesterQuery | 現在の学期を取得 | ✅ 完了 |
 
 ### 履修登録 (Phase 4 - 未実装)
 

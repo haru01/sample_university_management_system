@@ -15,7 +15,7 @@ public class SemesterRepository : ISemesterRepository
     public async Task<Semester?> GetByIdAsync(SemesterId id, CancellationToken cancellationToken = default)
     {
         return await _context.Semesters
-            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(s => EF.Property<int>(s, "_idYear") == id.Year && EF.Property<string>(s, "_idPeriod") == id.Period, cancellationToken);
     }
 
     public async Task<List<Semester>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -23,6 +23,14 @@ public class SemesterRepository : ISemesterRepository
         return await _context.Semesters
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Semester?> GetCurrentSemesterAsync(CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        return await _context.Semesters
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.StartDate <= now && now <= s.EndDate, cancellationToken);
     }
 
     public async Task AddAsync(Semester semester, CancellationToken cancellationToken = default)
