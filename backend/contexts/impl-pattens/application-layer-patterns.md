@@ -622,7 +622,7 @@ Application層のテスト戦略については、専用ドキュメントを参
 
 - テストピラミッド（Application層中心の統合テスト戦略）
 - インメモリDBを使ったテスト独立性の確保
-- CommandService/QueryServiceのテストパターン
+- CommandHandler/QueryHandlerのテストパターン
 - E2Eテストの最小化戦略
 - テストデータビルダーパターン
 - CI/CDでのテスト実行
@@ -630,7 +630,7 @@ Application層のテスト戦略については、専用ドキュメントを参
 ### 基本方針の概要
 
 1. **Application層を手厚くテスト**
-   - CommandService/QueryServiceに対する包括的なテスト
+   - CommandHandler/QueryHandlerに対する包括的なテスト
    - インメモリデータベース（EF Core In-Memory Provider）を使用
    - ドメインロジックとリポジトリの統合テスト
 

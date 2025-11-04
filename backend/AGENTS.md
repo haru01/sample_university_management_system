@@ -29,12 +29,12 @@ UniversityManagement/
 │   │   │   ├── Commands/
 │   │   │   │   └── EnrollStudent/
 │   │   │   │       ├── EnrollStudentCommand.cs
-│   │   │   │       ├── EnrollStudentCommandService.cs
+│   │   │   │       ├── EnrollStudentCommandHandler.cs
 │   │   │   │       └── EnrollStudentCommandValidator.cs
 │   │   │   ├── Queries/
 │   │   │   │   └── GetEnrollmentsByStudent/
 │   │   │   │       ├── GetEnrollmentsByStudentQuery.cs
-│   │   │   │       ├── GetEnrollmentsByStudentQueryService.cs
+│   │   │   │       ├── GetEnrollmentsByStudentQueryHandler.cs
 │   │   │   │       └── EnrollmentSummaryDto.cs
 │   │   │   └── Common/
 │   │   ├── Infrastructure/
@@ -85,7 +85,7 @@ UniversityManagement/
 ### ⚙️ [Application層 実装パターン](contexts/impl-pattens/application-layer-patterns.md)
 
 - Command/Query インターフェース（CQRS）
-- CommandService / QueryService
+- CommandHandler / QueryHandler（MediatR）
 - FluentValidation によるバリデーション
 - トランザクション管理
 - 例外ハンドリング
@@ -94,7 +94,7 @@ UniversityManagement/
 
 - テストピラミッド（Application層中心の統合テスト戦略）
 - インメモリDBを使ったテスト独立性の確保
-- CommandService/QueryServiceのテストパターン
+- CommandHandler/QueryHandlerのテストパターン
 - E2Eテストの最小化戦略
 - テストデータビルダーパターン
 - CI/CDでのテスト実行

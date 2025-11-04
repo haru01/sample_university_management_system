@@ -111,12 +111,12 @@ Application/
 ├── Commands/                   # 状態変更操作
 │   └── {UseCase}/
 │       ├── {UseCase}Command.cs
-│       ├── {UseCase}CommandService.cs
+│       ├── {UseCase}CommandHandler.cs
 │       └── {UseCase}CommandValidator.cs
 ├── Queries/                    # データ取得操作
 │   └── {UseCase}/
 │       ├── {UseCase}Query.cs
-│       ├── {UseCase}QueryService.cs
+│       ├── {UseCase}QueryHandler.cs
 │       └── {UseCase}Dto.cs
 └── Common/                     # 共通インターフェース
     ├── ICommand.cs
@@ -172,13 +172,13 @@ Api/
 
 ```csharp
 // ✅ 良い例: 1集約のみ変更
-public class EnrollStudentCommandService
+public class EnrollStudentCommandHandler
 {
-    public async Task<EnrollmentId> ExecuteAsync(EnrollStudentCommand command)
+    public async Task<EnrollmentId> Handle(EnrollStudentCommand command, CancellationToken cancellationToken)
     {
         var enrollment = Enrollment.Create(...);
-        await _enrollmentRepository.AddAsync(enrollment);
-        await _dbContext.SaveChangesAsync(); // 1トランザクション
+        await _enrollmentRepository.AddAsync(enrollment, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken); // 1トランザクション
         return enrollment.Id;
     }
 }
@@ -272,11 +272,11 @@ public class EnrollmentRepository : IEnrollmentRepository
 }
 
 // Application層: インターフェースに依存
-public class EnrollStudentCommandService
+public class EnrollStudentCommandHandler
 {
     private readonly IEnrollmentRepository _repository; // 抽象に依存
 
-    public EnrollStudentCommandService(IEnrollmentRepository repository)
+    public EnrollStudentCommandHandler(IEnrollmentRepository repository)
     {
         _repository = repository;
     }
@@ -315,14 +315,14 @@ public record EnrollStudentCommand : ICommand<EnrollmentId>
     public string CourseCode { get; init; }
 }
 
-// Serviceで集約を通じて変更
-public class EnrollStudentCommandService
+// Handlerで集約を通じて変更
+public class EnrollStudentCommandHandler
 {
-    public async Task<EnrollmentId> ExecuteAsync(EnrollStudentCommand command)
+    public async Task<EnrollmentId> Handle(EnrollStudentCommand command, CancellationToken cancellationToken)
     {
         var enrollment = Enrollment.Create(...);  // ドメインロジック
-        await _repository.AddAsync(enrollment);
-        await _dbContext.SaveChangesAsync();
+        await _repository.AddAsync(enrollment, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         return enrollment.Id;
     }
 }
@@ -335,17 +335,18 @@ public record GetEnrollmentsByStudentQuery : IQuery<List<EnrollmentSummaryDto>>
     public Guid StudentId { get; init; }
 }
 
-// Serviceで直接クエリ
-public class GetEnrollmentsByStudentQueryService
+// Handlerで直接クエリ
+public class GetEnrollmentsByStudentQueryHandler
 {
-    public async Task<List<EnrollmentSummaryDto>> ExecuteAsync(
-        GetEnrollmentsByStudentQuery query)
+    public async Task<List<EnrollmentSummaryDto>> Handle(
+        GetEnrollmentsByStudentQuery query,
+        CancellationToken cancellationToken)
     {
         return await _context.Enrollments
             .AsNoTracking()  // 変更追跡不要
             .Where(e => e.StudentId == new StudentId(query.StudentId))
             .Select(e => new EnrollmentSummaryDto { ... })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 }
 ```

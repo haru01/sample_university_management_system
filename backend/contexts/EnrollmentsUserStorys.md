@@ -134,7 +134,7 @@ Scenario: 登録されている全コースを取得する
     | コースコード | コース名       | 単位数 | 定員 |
     | CS101        | プログラミング入門 | 3      | 30   |
     | MATH201      | 線形代数       | 4      | 25   |
-  When GetCoursesServiceを実行する
+  When GetCoursesQueryを実行する
   Then 2件のCourseDtoが返される
   And 1件目のコースコードが "CS101" である
   And 1件目のコース名が "プログラミング入門" である
@@ -145,7 +145,7 @@ Scenario: 登録されている全コースを取得する
 ```gherkin
 Scenario: コースが1件も登録されていない場合
   Given データベースにコースが登録されていない
-  When GetCoursesServiceを実行する
+  When GetCoursesQueryを実行する
   Then 空のリスト（0件）が返される
 ```
 
@@ -174,7 +174,7 @@ Scenario: 存在するコースコードでコースを取得する
     - Name: "プログラミング入門"
     - Credits: 3
     - MaxCapacity: 30
-  When GetCourseByCodeServiceを実行する
+  When GetStudentsQueryを実行する
     - CourseCode: "CS101"
   Then CourseDtoが返される
   And コースコードが "CS101" である
@@ -186,7 +186,7 @@ Scenario: 存在するコースコードでコースを取得する
 ```gherkin
 Scenario: 存在しないコースコードで取得を試みる
   Given データベースにコースコード "XXX999" のコースが登録されていない
-  When GetCourseByCodeServiceを実行する
+  When GetCourseByCodeQueryを実行する
     - CourseCode: "XXX999"
   Then KeyNotFoundException がスローされる
   And エラーメッセージに "not found" が含まれる
@@ -315,7 +315,7 @@ Scenario: 全学生を取得する
     | id-001 | 山田太郎 | yamada@example.com | 1 |
     | id-002 | 鈴木花子 | suzuki@example.com | 2 |
     | id-003 | 田中次郎 | tanaka@example.com | 3 |
-  When GetStudentsServiceを実行する
+  When GetStudentsQueryを実行する
     - フィルタ条件: なし
   Then 3件のStudentDtoが返される
   And 学生が登録日時の昇順でソートされている
@@ -324,7 +324,7 @@ Scenario: 全学生を取得する
 ```gherkin
 Scenario: 学年でフィルタリングして学生を取得する
   Given データベースに学年1, 2, 3の学生が混在して登録されている
-  When GetStudentsServiceを実行する
+  When GetStudentsQueryを実行する
     - Grade: 2
   Then 学年が 2 の学生のみが返される
   And 複数該当する場合は登録日時の昇順でソートされている
@@ -337,7 +337,7 @@ Scenario: 名前で部分一致検索して学生を取得する
     | 山田太郎 |
     | 山田花子 |
     | 田中次郎 |
-  When GetStudentsServiceを実行する
+  When GetStudentsQueryを実行する
     - Name: "山田"
   Then "山田太郎" と "山田花子" のみが返される
   And 大文字小文字を区別しない
@@ -350,7 +350,7 @@ Scenario: メールアドレスで検索して学生を取得する
     | yamada@example.com |
     | suzuki@example.com |
     | suzuki@hoge.com |
-  When GetStudentsServiceを実行する
+  When GetStudentsQueryを実行する
     - Email: "example.com"
   Then 部分一致する学生が全て返される
 ```
@@ -358,7 +358,7 @@ Scenario: メールアドレスで検索して学生を取得する
 ```gherkin
 Scenario: 複数の条件を組み合わせて検索する
   Given データベースに複数の学生が登録されている
-  When GetStudentsServiceを実行する
+  When GetStudentsQueryを実行する
     - Grade: 2
     - Name: "山田"
   Then 学年が 2 且つ名前に "山田" が含まれる学生のみが返される
@@ -367,7 +367,7 @@ Scenario: 複数の条件を組み合わせて検索する
 ```gherkin
 Scenario: 検索結果が0件の場合
   Given データベースに学生が登録されている
-  When GetStudentsServiceを実行する
+  When GetStudentsQueryを実行する
     - Name: "存在しない名前"
   Then 空のリスト（0件）が返される
 ```
@@ -375,7 +375,7 @@ Scenario: 検索結果が0件の場合
 ```gherkin
 Scenario: 学生が1件も登録されていない場合
   Given データベースに学生が登録されていない
-  When GetStudentsServiceを実行する
+  When GetStudentsQueryを実行する
     - フィルタ条件: なし
   Then 空のリスト（0件）が返される
 ```
@@ -682,7 +682,7 @@ API利用者として、履修登録をキャンセルできるようにした�
 Scenario: 進行中の履修登録をキャンセルする
   Given データベースに履修登録ID "abc-123" の履修登録が存在する
   And 履修登録ステータスが "InProgress" である
-  When CancelEnrollmentServiceを実行する
+  When CancelEnrollmentCommandを実行する
     - EnrollmentId: "abc-123"
   Then 正常に完了する（戻り値なし）
   And データベースの履修登録ステータスが "Cancelled" になる
@@ -693,7 +693,7 @@ Scenario: 進行中の履修登録をキャンセルする
 Scenario: 既に完了している履修登録をキャンセルしようとする
   Given データベースに履修登録ID "abc-123" の履修登録が存在する
   And 履修登録ステータスが "Completed" である
-  When CancelEnrollmentServiceを実行する
+  When CancelEnrollmentCommandを実行する
     - EnrollmentId: "abc-123"
   Then InvalidOperationException がスローされる
   And エラーメッセージに "Cannot cancel completed enrollment" が含まれる
@@ -703,7 +703,7 @@ Scenario: 既に完了している履修登録をキャンセルしようとす�
 ```gherkin
 Scenario: 存在しない履修登録IDでキャンセルを試みる
   Given データベースに履修登録ID "99999999" の履修登録が存在しない
-  When CancelEnrollmentServiceを実行する
+  When CancelEnrollmentCommandを実行する
     - EnrollmentId: "99999999"
   Then KeyNotFoundException がスローされる
   And エラーメッセージに "Enrollment not found" が含まれる

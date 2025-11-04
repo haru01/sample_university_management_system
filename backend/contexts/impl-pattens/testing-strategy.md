@@ -3,7 +3,7 @@
 ## 基本方針
 
 1. **Application層を手厚くテスト**
-   - CommandService/QueryServiceに対する包括的なテスト
+   - CommandHandler/QueryHandlerに対する包括的なテスト
    - インメモリデータベース（EF Core In-Memory Provider）を使用
    - ドメインロジックとリポジトリの統合テスト
 
@@ -150,15 +150,15 @@ public class EnrollmentBuilder
 - テストの因果関係がメソッド内で完結し、可読性が向上
 - 継承による複雑さを排除
 
-### CommandServiceのテスト例
+### CommandHandlerのテスト例
 
 ```csharp
-public class EnrollStudentCommandServiceTests : IDisposable
+public class EnrollStudentCommandHandlerTests : IDisposable
 {
     private EnrollmentDbContext _context = null!;
-    private EnrollStudentCommandService _service = null!;
+    private EnrollStudentCommandHandler _handler = null!;
 
-    public EnrollStudentCommandServiceTests()
+    public EnrollStudentCommandHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<EnrollmentDbContext>()
@@ -167,13 +167,13 @@ public class EnrollStudentCommandServiceTests : IDisposable
 
         _context = new EnrollmentDbContext(options);
 
-        // サービスの依存関係を初期化
+        // ハンドラーの依存関係を初期化
         var enrollmentRepository = new EnrollmentRepository(_context);
         var studentRepository = new StudentRepository(_context);
         var courseRepository = new CourseRepository(_context);
         var domainService = new EnrollmentDomainService();
 
-        _service = new EnrollStudentCommandService(
+        _handler = new EnrollStudentCommandHandler(
             enrollmentRepository,
             studentRepository,
             courseRepository,
@@ -205,7 +205,7 @@ public class EnrollStudentCommandServiceTests : IDisposable
         };
 
         // Act
-        var enrollmentId = await _service.ExecuteAsync(command);
+        var enrollmentId = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         Assert.NotNull(enrollmentId);
@@ -230,7 +230,7 @@ public class EnrollStudentCommandServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
-            async () => await _service.ExecuteAsync(command));
+            async () => await _handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public class EnrollStudentCommandServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            async () => await _service.ExecuteAsync(command));
+            async () => await _handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]
@@ -281,20 +281,20 @@ public class EnrollStudentCommandServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _service.ExecuteAsync(command));
+            async () => await _handler.Handle(command, CancellationToken.None));
     }
 }
 ```
 
-### QueryServiceのテスト例
+### QueryHandlerのテスト例
 
 ```csharp
-public class GetEnrollmentsByStudentQueryServiceTests : IDisposable
+public class GetEnrollmentsByStudentQueryHandlerTests : IDisposable
 {
     private EnrollmentDbContext _context = null!;
-    private GetEnrollmentsByStudentQueryService _service = null!;
+    private GetEnrollmentsByStudentQueryHandler _handler = null!;
 
-    public GetEnrollmentsByStudentQueryServiceTests()
+    public GetEnrollmentsByStudentQueryHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<EnrollmentDbContext>()
@@ -302,7 +302,7 @@ public class GetEnrollmentsByStudentQueryServiceTests : IDisposable
             .Options;
 
         _context = new EnrollmentDbContext(options);
-        _service = new GetEnrollmentsByStudentQueryService(_context);
+        _handler = new GetEnrollmentsByStudentQueryHandler(_context);
     }
 
     public void Dispose()
@@ -344,7 +344,7 @@ public class GetEnrollmentsByStudentQueryServiceTests : IDisposable
         };
 
         // Act
-        var results = await _service.ExecuteAsync(query);
+        var results = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -385,7 +385,7 @@ public class GetEnrollmentsByStudentQueryServiceTests : IDisposable
         };
 
         // Act
-        var results = await _service.ExecuteAsync(query);
+        var results = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Single(results);
@@ -403,7 +403,7 @@ public class GetEnrollmentsByStudentQueryServiceTests : IDisposable
         };
 
         // Act
-        var results = await _service.ExecuteAsync(query);
+        var results = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Empty(results);
@@ -545,12 +545,12 @@ public class EnrollmentAggregateTests
 
 ```csharp
 // ✅ 良い例：各テストで新しいDbContextを明示的に作成
-public class EnrollStudentCommandServiceTests : IDisposable
+public class EnrollStudentCommandHandlerTests : IDisposable
 {
     private EnrollmentDbContext _context = null!;
-    private EnrollStudentCommandService _service = null!;
+    private EnrollStudentCommandHandler _handler = null!;
 
-    public EnrollStudentCommandServiceTests()
+    public EnrollStudentCommandHandlerTests()
     {
         var options = new DbContextOptionsBuilder<EnrollmentDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -560,7 +560,7 @@ public class EnrollStudentCommandServiceTests : IDisposable
         // 依存関係を明示的に初期化
         var enrollmentRepository = new EnrollmentRepository(_context);
         // ... 他の依存関係
-        _service = new EnrollStudentCommandService(enrollmentRepository, ...);
+        _handler = new EnrollStudentCommandHandler(enrollmentRepository, ...);
     }
 
     public void Dispose()
@@ -573,7 +573,7 @@ public class EnrollStudentCommandServiceTests : IDisposable
 private static readonly EnrollmentDbContext SharedContext = ...;
 
 // ❌ 悪い例：ベースクラスで暗黙的に初期化（継承の複雑さ）
-public class EnrollStudentCommandServiceTests : ApplicationTestBase
+public class EnrollStudentCommandHandlerTests : ApplicationTestBase
 {
     // base.SetUp()への暗黙的な依存
 }
@@ -589,7 +589,7 @@ public async Task 正常な履修登録コマンドで履修登録が作成さ�
     var command = new EnrollStudentCommand { ... };
 
     // Act: 実行
-    var result = await _service.ExecuteAsync(command);
+    var result = await _handler.Handle(command, CancellationToken.None);
 
     // Assert: 検証
     Assert.NotNull(result);
@@ -610,7 +610,7 @@ public async Task 正常な履修登録コマンドで履修登録が作成さ�
 
 ### 4. テストカバレッジの優先順位
 
-- **高**: Application層のCommand/QueryService（統合テスト）
+- **高**: Application層のCommand/QueryHandler（統合テスト）
 - **中**: 複雑なビジネスロジック（Domain層のユニットテスト）
 - **中**: バリデーションロジック
 - **低**: 単純なGetter/Setter、DTOマッピング
@@ -706,7 +706,7 @@ public class EnrollmentDomainTests
 }
 
 [Trait("Category", "Integration")]
-public class EnrollStudentCommandServiceTests : IDisposable
+public class EnrollStudentCommandHandlerTests : IDisposable
 {
     // Application層の統合テスト
 }
@@ -724,7 +724,7 @@ dotnet test --filter "Category=Unit"
 dotnet test --filter "Category=Integration"
 
 # 特定のテストクラスのみ実行
-dotnet test --filter "FullyQualifiedName~CreateCourseServiceTests"
+dotnet test --filter "FullyQualifiedName~CreateCourseHandlerTests"
 
 # 複数カテゴリの組み合わせ
 dotnet test --filter "Category=Unit|Category=Integration"

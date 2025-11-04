@@ -221,7 +221,7 @@ public class EnrollmentRepository : IEnrollmentRepository
 
 ### リポジトリ設計原則
 - **SaveChangesは呼ばない**: DbContextのUnit of Work機能に任せる
-- **シンプルな取得メソッドのみ**: 複雑なクエリはQueryServiceで実装
+- **シンプルな取得メソッドのみ**: 複雑なクエリはQueryHandlerで実装
 - **集約全体を取得**: 必要なら `Include()` で関連エンティティも取得
 - **IQueryable は返さない**: リポジトリ外にクエリロジックが漏れるのを防ぐ
 
@@ -746,17 +746,17 @@ public class SmtpEmailService : IEmailService
 
 ### Dapper使用例（複雑な読み取り専用クエリ）
 ```csharp
-public class GetEnrollmentStatisticsQueryService
-    : IQueryService<GetEnrollmentStatisticsQuery, EnrollmentStatisticsDto>
+public class GetEnrollmentStatisticsQueryHandler
+    : IRequestHandler<GetEnrollmentStatisticsQuery, EnrollmentStatisticsDto>
 {
     private readonly IDbConnection _connection;
 
-    public GetEnrollmentStatisticsQueryService(IDbConnection connection)
+    public GetEnrollmentStatisticsQueryHandler(IDbConnection connection)
     {
         _connection = connection;
     }
 
-    public async Task<EnrollmentStatisticsDto> ExecuteAsync(
+    public async Task<EnrollmentStatisticsDto> Handle(
         GetEnrollmentStatisticsQuery query,
         CancellationToken cancellationToken = default)
     {
