@@ -20,7 +20,7 @@ public class CreateSemesterCommandHandler : IRequestHandler<CreateSemesterComman
     {
         // 学期IDの作成と重複チェック
         var semesterId = new SemesterId(request.Year, request.Period);
-        var existing = await _semesterRepository.GetByIdAsync(semesterId);
+        var existing = await _semesterRepository.GetByIdAsync(semesterId, cancellationToken);
         if (existing != null)
             throw new ConflictException("SEMESTER_ALREADY_EXISTS", "Semester already exists");
 
@@ -32,8 +32,8 @@ public class CreateSemesterCommandHandler : IRequestHandler<CreateSemesterComman
             request.EndDate);
 
         // 永続化
-        await _semesterRepository.AddAsync(semester);
-        await _semesterRepository.SaveChangesAsync();
+        await _semesterRepository.AddAsync(semester, cancellationToken);
+        await _semesterRepository.SaveChangesAsync(cancellationToken);
 
         return semester.Id;
     }

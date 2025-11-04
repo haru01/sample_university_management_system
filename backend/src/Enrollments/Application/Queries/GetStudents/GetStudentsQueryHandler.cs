@@ -27,7 +27,7 @@ public class GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<St
         };
 
         // SQLレベルでフィルタリング・ソート
-        var students = await _studentRepository.GetFilteredAsync(domainQuery);
+        var students = await _studentRepository.GetFilteredAsync(domainQuery, cancellationToken);
 
         // DTO に変換
         return students

@@ -19,7 +19,7 @@ public class CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand,
     public async Task<Guid> Handle(CreateStudentCommand request, CancellationToken cancellationToken)
     {
         // メールアドレスの重複チェック
-        var existing = await _studentRepository.GetByEmailAsync(request.Email);
+        var existing = await _studentRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (existing != null)
             throw new ConflictException("STUDENT_EMAIL_ALREADY_EXISTS", "Email already exists");
 
@@ -30,8 +30,8 @@ public class CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand,
             request.Grade);
 
         // 永続化
-        await _studentRepository.AddAsync(student);
-        await _studentRepository.SaveChangesAsync();
+        await _studentRepository.AddAsync(student, cancellationToken);
+        await _studentRepository.SaveChangesAsync(cancellationToken);
 
         return student.Id.Value;
     }

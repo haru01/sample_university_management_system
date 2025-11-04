@@ -12,27 +12,27 @@ public class CourseRepository : ICourseRepository
         _context = context;
     }
 
-    public async Task<Course?> GetByCodeAsync(CourseCode code)
+    public async Task<Course?> GetByCodeAsync(CourseCode code, CancellationToken cancellationToken = default)
     {
         return await _context.Courses
-            .FirstOrDefaultAsync(c => c.Id == code);
+            .FirstOrDefaultAsync(c => c.Id == code, cancellationToken);
     }
 
-    public async Task<List<Course>> GetAllAsync()
+    public async Task<List<Course>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Courses
             .AsNoTracking()          // 読み取り専用クエリ - 変更追跡不要
             .OrderBy(c => c.Id)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task AddAsync(Course course)
+    public async Task AddAsync(Course course, CancellationToken cancellationToken = default)
     {
-        await _context.Courses.AddAsync(course);
+        await _context.Courses.AddAsync(course, cancellationToken);
     }
 
-    public async Task SaveChangesAsync()
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }

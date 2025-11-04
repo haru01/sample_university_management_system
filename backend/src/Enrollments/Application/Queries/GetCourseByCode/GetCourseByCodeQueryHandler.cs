@@ -19,7 +19,7 @@ public class GetCourseByCodeQueryHandler : IRequestHandler<GetCourseByCodeQuery,
     public async Task<CourseDto?> Handle(GetCourseByCodeQuery request, CancellationToken cancellationToken)
     {
         var code = new CourseCode(request.CourseCode);
-        var course = await _courseRepository.GetByCodeAsync(code);
+        var course = await _courseRepository.GetByCodeAsync(code, cancellationToken);
 
         if (course == null)
             return null;

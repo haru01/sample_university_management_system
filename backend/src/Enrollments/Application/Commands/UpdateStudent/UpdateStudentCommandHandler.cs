@@ -19,12 +19,12 @@ public class UpdateStudentCommandHandler : IRequestHandler<UpdateStudentCommand>
     public async Task Handle(UpdateStudentCommand request, CancellationToken cancellationToken)
     {
         // 学生IDで学生を取得
-        var student = await _studentRepository.GetByIdAsync(new StudentId(request.StudentId));
+        var student = await _studentRepository.GetByIdAsync(new StudentId(request.StudentId), cancellationToken);
         if (student == null)
             throw new NotFoundException("STUDENT_NOT_FOUND", "Student not found");
 
         // 他の学生が同じメールアドレスを使用していないかチェック
-        var existingStudent = await _studentRepository.GetByEmailAsync(request.Email);
+        var existingStudent = await _studentRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (existingStudent != null && existingStudent.Id.Value != request.StudentId)
             throw new ConflictException("STUDENT_EMAIL_ALREADY_EXISTS", "Email already exists");
 
@@ -35,6 +35,6 @@ public class UpdateStudentCommandHandler : IRequestHandler<UpdateStudentCommand>
             request.Grade);
 
         // 永続化
-        await _studentRepository.SaveChangesAsync();
+        await _studentRepository.SaveChangesAsync(cancellationToken);
     }
 }

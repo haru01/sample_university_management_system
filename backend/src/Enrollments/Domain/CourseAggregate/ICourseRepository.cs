@@ -5,12 +5,12 @@ namespace Enrollments.Domain.CourseAggregate;
 /// </summary>
 public interface ICourseRepository
 {
-    Task<Course?> GetByCodeAsync(CourseCode code);
-    Task<List<Course>> GetAllAsync();
-    Task AddAsync(Course course);
+    Task<Course?> GetByCodeAsync(CourseCode code, CancellationToken cancellationToken = default);
+    Task<List<Course>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task AddAsync(Course course, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 変更を永続化（Unit of Work パターン）
     /// </summary>
-    Task SaveChangesAsync();
+    Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

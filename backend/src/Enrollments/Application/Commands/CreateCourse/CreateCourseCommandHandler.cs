@@ -22,7 +22,7 @@ public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, s
         var courseCode = new CourseCode(request.CourseCode);
 
         // 重複チェック
-        var existing = await _courseRepository.GetByCodeAsync(courseCode);
+        var existing = await _courseRepository.GetByCodeAsync(courseCode, cancellationToken);
         if (existing != null)
             throw new ConflictException("COURSE_ALREADY_EXISTS", $"Course with code {courseCode} already exists");
 
@@ -34,8 +34,8 @@ public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, s
             request.MaxCapacity);
 
         // 永続化
-        await _courseRepository.AddAsync(course);
-        await _courseRepository.SaveChangesAsync();
+        await _courseRepository.AddAsync(course, cancellationToken);
+        await _courseRepository.SaveChangesAsync(cancellationToken);
 
         return course.Id.Value;
     }

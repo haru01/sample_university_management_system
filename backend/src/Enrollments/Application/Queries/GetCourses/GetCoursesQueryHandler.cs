@@ -17,7 +17,7 @@ public class GetCoursesQueryHandler : IRequestHandler<GetCoursesQuery, List<Cour
 
     public async Task<List<CourseDto>> Handle(GetCoursesQuery request, CancellationToken cancellationToken)
     {
-        var courses = await _courseRepository.GetAllAsync();
+        var courses = await _courseRepository.GetAllAsync(cancellationToken);
 
         return courses.Select(c => new CourseDto
         {

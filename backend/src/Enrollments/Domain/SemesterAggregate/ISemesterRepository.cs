@@ -8,25 +8,25 @@ public interface ISemesterRepository
     /// <summary>
     /// 学期IDで学期を取得
     /// </summary>
-    Task<Semester?> GetByIdAsync(SemesterId id);
+    Task<Semester?> GetByIdAsync(SemesterId id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 全学期を取得
     /// </summary>
-    Task<List<Semester>> GetAllAsync();
+    Task<List<Semester>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 学期を追加
     /// </summary>
-    Task AddAsync(Semester semester);
+    Task AddAsync(Semester semester, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 学期を削除
     /// </summary>
-    Task DeleteAsync(Semester semester);
+    Task DeleteAsync(Semester semester, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 変更を保存
     /// </summary>
-    Task SaveChangesAsync();
+    Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }
