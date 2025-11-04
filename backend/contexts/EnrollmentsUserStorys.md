@@ -36,6 +36,17 @@
 | GetSemestersQueryHandler | GetSemestersQuery | 学期一覧を取得 | ✅ 完了 |
 | GetCurrentSemesterQueryHandler | GetCurrentSemesterQuery | 現在の学期を取得 | ✅ 完了 |
 
+### コースステータス管理 (Phase 3.5 - 未実装)
+
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| CreateCourseCommandHandler（修正） | CreateCourseCommand | コース登録時にActiveステータス自動作成 | ⬜ 未実装 |
+| ActivateCourseCommandHandler | ActivateCourseCommand | コースを有効化 | ⬜ 未実装 |
+| ArchiveCourseCommandHandler | ArchiveCourseCommand | コースをアーカイブ | ⬜ 未実装 |
+| SuspendCourseCommandHandler | SuspendCourseCommand | コースを休止 | ⬜ 未実装 |
+| GetCourseStatusHistoryQueryHandler | GetCourseStatusHistoryQuery | コースのステータス履歴を取得 | ⬜ 未実装 |
+| GetActiveCoursesByDateQueryHandler | GetActiveCoursesByDateQuery | 指定日時点で有効なコース一覧を取得 | ⬜ 未実装 |
+
 ### 履修登録 (Phase 4 - 未実装)
 
 | Handler | Command/Query | 説明 | 実装状態 |
@@ -70,6 +81,9 @@ Scenario: 有効なコース情報で新しいコースを登録する
   And データベースにコースが保存されている
   And コース名が "プログラミング入門" である
   And 単位数が 3 である
+  And CourseStatusHistoryにActiveステータスのレコードが自動作成される（Phase 3.5実装後）
+  And ステータスのValidFromが現在日時である
+  And ステータスのValidToが null である
 ```
 
 ```gherkin
@@ -153,6 +167,7 @@ Scenario: コースが1件も登録されていない場合
 
 - 全てのコースを取得（ページネーション未実装）
 - コース情報は読み取り専用
+- **Phase 3.5実装後の注意**: このQueryはステータスに関わらず全コースを返す（管理者用）。学生が履修登録可能なコースのみを取得する場合は `GetActiveCoursesByDateQuery` (US-CS05) を使用すること
 
 **実装状態:** ✅ 完了
 
@@ -196,6 +211,7 @@ Scenario: 存在しないコースコードで取得を試みる
 
 - コースコードは大文字小文字を区別しない（自動的に大文字変換）
 - 存在しないコースの場合は404エラー
+- **Phase 3.5実装後の注意**: このQueryはステータスに関わらずコースを返す（管理者用）。履修登録可能なコースのみをチェックする場合は、取得後に `GetCourseStatusHistoryQuery` で現在のステータスを確認するか、`GetActiveCoursesByDateQuery` を使用すること
 
 **実装状態:** ✅ 完了
 
@@ -582,6 +598,356 @@ Scenario: 現在の学期が存在しない場合
 
 ---
 
+## エピック3.5: コースステータス管理
+
+### ⬜ US-CS00: コース登録時に自動的にActiveステータスを作成する（統合タスク）
+
+**ストーリー:**
+開発者として、コース登録時に自動的にActiveステータスの履歴を作成したい。なぜなら、新規登録されたコースはデフォルトで履修登録可能な状態にする必要があるから。
+
+**Handler:** `CreateCourseCommandHandler` の修正（既存）
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: コース登録時にActiveステータスが自動作成される
+  Given データベースが利用可能である
+  When CreateCourseCommandを実行する
+    - CourseCode: "CS101"
+    - Name: "プログラミング入門"
+    - Credits: 3
+    - MaxCapacity: 30
+  Then コースコード "CS101" が返される
+  And データベースにコースが保存されている
+  And CourseStatusHistoryにレコードが1件作成されている
+  And ステータスが "Active" である
+  And ValidFromが現在日時である
+  And ValidToが null である
+  And Reasonが "新規登録" または null である
+```
+
+**制約:**
+
+- CreateCourseCommandHandler内で、Courseエンティティ保存後にCourseStatusHistoryレコードを自動作成
+- トランザクション内で両方のエンティティを保存（どちらかが失敗した場合はロールバック）
+- US-E01の受け入れ条件に追加シナリオとして記載済み
+
+**実装状態:** ⬜ 未実装（Phase 3.5で実装）
+
+**実装優先順位:** Phase 3.5の最優先タスク（他のステータス管理機能の前提条件）
+
+---
+
+### ⬜ US-CS01: コースを有効化できる
+
+**ストーリー:**
+管理者として、コースを有効化できるようにしたい。なぜなら、新規開講や休止中のコースを再開させる際にステータスを変更する必要があるから。
+
+**Handler:** `ActivateCourseCommandHandler : IRequestHandler<ActivateCourseCommand, Unit>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 新規コースを有効化する
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And コースにステータス履歴が存在しない（初回有効化）
+  When ActivateCourseCommandを実行する
+    - CourseCode: "CS101"
+    - ValidFrom: 2024-04-01
+    - Reason: "新規開講"
+  Then CourseStatusHistoryエンティティが作成される
+  And Statusが "Active" である
+  And ValidFromが 2024-04-01 である
+  And ValidToが null である
+  And データベースに保存される
+```
+
+```gherkin
+Scenario: 休止中のコースを再有効化する
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスが "Suspended" である（2024-01-01〜現在）
+  When ActivateCourseCommandを実行する
+    - CourseCode: "CS101"
+    - ValidFrom: 2024-04-01
+    - Reason: "再開"
+  Then 既存のSuspendedステータスのValidToが 2024-03-31 に更新される
+  And 新しいActiveステータスのレコードが作成される
+  And 新しいレコードのValidFromが 2024-04-01 である
+  And 新しいレコードのValidToが null である
+```
+
+```gherkin
+Scenario: 既に有効化されているコースを再度有効化しようとする
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスが "Active" である（ValidToが null）
+  When ActivateCourseCommandを実行する
+    - CourseCode: "CS101"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Course is already active" が含まれる
+```
+
+```gherkin
+Scenario: 存在しないコースコードで有効化を試みる
+  Given データベースにコースコード "XXX999" のコースが存在しない
+  When ActivateCourseCommandを実行する
+    - CourseCode: "XXX999"
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "Course not found" が含まれる
+```
+
+```gherkin
+Scenario: 開始日が過去のステータス終了日より前の日付で有効化を試みる
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 最新のステータス履歴のValidToが 2024-03-31 である
+  When ActivateCourseCommandを実行する
+    - CourseCode: "CS101"
+    - ValidFrom: 2024-03-01
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "ValidFrom must be after the previous status ValidTo date" が含まれる
+```
+
+**制約:**
+
+- ValidFromは必須
+- ValidFromは過去のステータスValidToの翌日以降である必要がある
+- 既にActiveステータス（ValidTo = null）の場合は重複有効化不可
+- 理由（Reason）はオプション、最大200文字
+- 新しいステータスを追加する際、直前のステータスのValidToを自動更新（ValidFrom - 1日）
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-CS02: コースをアーカイブできる
+
+**ストーリー:**
+管理者として、コースをアーカイブできるようにしたい。なぜなら、開講終了したコースを履修登録不可にしながらも、履歴として保持する必要があるから。
+
+**Handler:** `ArchiveCourseCommandHandler : IRequestHandler<ArchiveCourseCommand, Unit>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 有効なコースをアーカイブする
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスが "Active" である（2024-04-01〜現在）
+  When ArchiveCourseCommandを実行する
+    - CourseCode: "CS101"
+    - ValidTo: 2024-09-30
+    - Reason: "カリキュラム改定により廃止"
+  Then 既存のActiveステータスのValidToが 2024-09-30 に更新される
+  And 新しいArchivedステータスのレコードが作成される
+  And 新しいレコードのValidFromが 2024-10-01 である
+  And 新しいレコードのValidToが null である
+```
+
+```gherkin
+Scenario: 既にアーカイブされているコースを再度アーカイブしようとする
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスが "Archived" である
+  When ArchiveCourseCommandを実行する
+    - CourseCode: "CS101"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Course is already archived" が含まれる
+```
+
+```gherkin
+Scenario: 休止中のコースをアーカイブする
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスが "Suspended" である
+  When ArchiveCourseCommandを実行する
+    - CourseCode: "CS101"
+    - ValidTo: 2024-09-30
+    - Reason: "開講中止"
+  Then 正常にアーカイブされる
+```
+
+```gherkin
+Scenario: 終了日が開始日より前の日付でアーカイブを試みる
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスのValidFromが 2024-04-01 である
+  When ArchiveCourseCommandを実行する
+    - CourseCode: "CS101"
+    - ValidTo: 2024-03-01
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "ValidTo must be after ValidFrom" が含まれる
+```
+
+**制約:**
+
+- ValidToは必須
+- ValidToは現在のステータスのValidFrom以降である必要がある
+- Archived状態からの再有効化も可能（別コマンド）
+- アーカイブされたコースは新規履修登録不可
+- 既存の履修登録には影響しない
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-CS03: コースを休止できる
+
+**ストーリー:**
+管理者として、コースを一時的に休止できるようにしたい。なぜなら、担当教員の不在や受講希望者不足により一時的に開講を見送る場合があるから。
+
+**Handler:** `SuspendCourseCommandHandler : IRequestHandler<SuspendCourseCommand, Unit>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 有効なコースを休止する
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスが "Active" である（2024-04-01〜現在）
+  When SuspendCourseCommandを実行する
+    - CourseCode: "CS101"
+    - ValidTo: 2024-09-30
+    - Reason: "担当教員不在のため一時休止"
+  Then 既存のActiveステータスのValidToが 2024-09-30 に更新される
+  And 新しいSuspendedステータスのレコードが作成される
+  And 新しいレコードのValidFromが 2024-10-01 である
+  And 新しいレコードのValidToが null である
+```
+
+```gherkin
+Scenario: 既に休止中のコースを再度休止しようとする
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスが "Suspended" である
+  When SuspendCourseCommandを実行する
+    - CourseCode: "CS101"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Course is already suspended" が含まれる
+```
+
+```gherkin
+Scenario: アーカイブされたコースを休止しようとする
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And 現在のステータスが "Archived" である
+  When SuspendCourseCommandを実行する
+    - CourseCode: "CS101"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Cannot suspend archived course" が含まれる
+```
+
+**制約:**
+
+- ValidToは必須
+- ValidToは現在のステータスのValidFrom以降である必要がある
+- Suspended状態から再有効化（Activate）可能
+- ArchivedステータスからSuspendedへの変更は不可
+- 休止中のコースは新規履修登録不可
+- 既存の履修登録には影響しない
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-CS04: コースのステータス履歴を取得できる
+
+**ストーリー:**
+管理者・教員として、コースのステータス変更履歴を確認できるようにしたい。なぜなら、コースの開講状況の変遷を把握し、監査や報告に利用する必要があるから。
+
+**Handler:** `GetCourseStatusHistoryQueryHandler : IRequestHandler<GetCourseStatusHistoryQuery, List<CourseStatusHistoryDto>>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: コースのステータス履歴を取得する
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And CourseStatusHistoryに以下のレコードが存在する
+    | Status    | ValidFrom  | ValidTo    | Reason          |
+    | Active    | 2023-04-01 | 2023-09-30 | 新規開講        |
+    | Suspended | 2023-10-01 | 2024-03-31 | 担当教員不在    |
+    | Active    | 2024-04-01 | null       | 再開            |
+  When GetCourseStatusHistoryQueryを実行する
+    - CourseCode: "CS101"
+  Then 3件のCourseStatusHistoryDtoが返される
+  And ValidFromの降順でソートされている（最新が先頭）
+  And 1件目のStatusが "Active" である
+  And 1件目のValidToが null である
+```
+
+```gherkin
+Scenario: ステータス履歴が存在しないコースの履歴を取得する
+  Given データベースにコースコード "CS101" のコースが登録されている
+  And CourseStatusHistoryにレコードが存在しない
+  When GetCourseStatusHistoryQueryを実行する
+    - CourseCode: "CS101"
+  Then 空のリストが返される
+```
+
+```gherkin
+Scenario: 存在しないコースコードで履歴を取得しようとする
+  Given データベースにコースコード "XXX999" のコースが存在しない
+  When GetCourseStatusHistoryQueryを実行する
+    - CourseCode: "XXX999"
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "Course not found" が含まれる
+```
+
+**制約:**
+
+- デフォルトソート: ValidFromの降順（最新が先頭）
+- 全ての履歴を取得（ページネーション未実装）
+- 読み取り専用
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-CS05: 指定日時点で有効なコース一覧を取得できる
+
+**ストーリー:**
+学生・教員として、指定した日付時点で履修登録可能なコース（有効なコース）の一覧を取得できるようにしたい。なぜなら、特定の学期や日付で開講されているコースのみを表示する必要があるから。
+
+**Handler:** `GetActiveCoursesByDateQueryHandler : IRequestHandler<GetActiveCoursesByDateQuery, List<CourseDto>>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 指定日時点で有効なコース一覧を取得する
+  Given データベースに以下のコースとステータス履歴が存在する
+    | CourseCode | Status    | ValidFrom  | ValidTo    |
+    | CS101      | Active    | 2024-04-01 | null       |
+    | MATH201    | Suspended | 2024-04-01 | null       |
+    | ENG101     | Active    | 2024-04-01 | 2024-09-30 |
+    | PHYS301    | Active    | 2024-10-01 | null       |
+  When GetActiveCoursesByDateQueryを実行する
+    - TargetDate: 2024-05-15
+  Then 2件のCourseDtoが返される
+  And "CS101" と "ENG101" のみが返される
+  And StatusがActiveでValidFrom <= 2024-05-15 <= ValidTo（またはnull）を満たす
+```
+
+```gherkin
+Scenario: 現在日時で有効なコース一覧を取得する（デフォルト）
+  Given データベースに複数のコースとステータス履歴が存在する
+  And 現在日時が 2024-05-15 である
+  When GetActiveCoursesByDateQueryを実行する
+    - TargetDate: 指定なし（null）
+  Then 現在日時（2024-05-15）時点でActiveなコースのみが返される
+```
+
+```gherkin
+Scenario: 指定日時点で有効なコースが存在しない場合
+  Given データベースにコースが存在する
+  And 全てのコースが 2024-06-01 以降にActiveである
+  When GetActiveCoursesByDateQueryを実行する
+    - TargetDate: 2024-05-15
+  Then 空のリストが返される
+```
+
+**制約:**
+
+- TargetDateが指定されない場合は現在日時を使用
+- Status = 'Active' のみを対象
+- ValidFrom <= TargetDate AND (ValidTo IS NULL OR ValidTo >= TargetDate)
+- コースの基本情報（コースコード、コース名、単位数、定員）を含む
+- デフォルトソート: コースコードの昇順
+
+**実装状態:** ⬜ 未実装
+
+---
+
 ## エピック4: 履修登録
 
 ### ⬜ US-R01: コースを履修登録できる
@@ -864,6 +1230,27 @@ Scenario: 存在しない履修登録IDで完了を試みる
 - **学期**: Spring または Fall
 - **一意制約**: 年度 + 学期
 
+### コースステータス履歴（CourseStatusHistory）
+
+- **ステータス種別**: Active（有効）、Archived（アーカイブ）、Suspended（休止）
+- **ステータス遷移**:
+  - `null` → `Active` ✅（初回有効化）
+  - `Active` → `Archived` ✅
+  - `Active` → `Suspended` ✅
+  - `Suspended` → `Active` ✅（再有効化）
+  - `Suspended` → `Archived` ✅
+  - `Archived` → `Active` ✅（再開講）
+  - `Archived` → `Suspended` ❌（不可）
+- **期間管理**:
+  - ValidFrom（有効開始日）は必須
+  - ValidTo（有効終了日）がnullの場合、現在進行中のステータス
+  - 1つのコースにつき、ValidTo = nullのレコードは最大1件
+  - 新しいステータスを追加する際、直前のステータスのValidToを自動更新（ValidFrom - 1日）
+  - ValidFromは過去のステータスValidToの翌日以降
+  - ValidTo >= ValidFrom（終了日は開始日以降）
+- **理由（Reason）**: オプション、最大200文字
+- **履修登録への影響**: Active状態のコースのみ新規履修登録可能
+
 ---
 
 ## 実装優先順位
@@ -880,11 +1267,28 @@ Scenario: 存在しない履修登録IDで完了を試みる
 - ✅ US-S02: 学生情報更新
 - ✅ US-S03: 学生一覧取得（条件絞込可能）
 
-### Phase 3: 学期管理（次フェーズ）
+### Phase 3: 学期管理（完了）
 
-- ⬜ US-M01: 学期登録
-- ⬜ US-M02: 学期一覧取得
-- ⬜ US-M03: 現在の学期取得
+- ✅ US-M01: 学期登録
+- ✅ US-M02: 学期一覧取得
+- ✅ US-M03: 現在の学期取得
+
+### Phase 3.5: コースステータス管理（次フェーズ）
+
+**優先順位1: 既存機能との統合**
+
+- ⬜ US-CS00: コース登録時にActiveステータス自動作成（CreateCourseCommandHandler修正）
+
+**優先順位2: コアステータス管理機能**
+
+- ⬜ US-CS01: コースを有効化
+- ⬜ US-CS02: コースをアーカイブ
+- ⬜ US-CS03: コースを休止
+
+**優先順位3: クエリ機能**
+
+- ⬜ US-CS04: コースのステータス履歴を取得
+- ⬜ US-CS05: 指定日時点で有効なコース一覧を取得
 
 ### Phase 4: 履修登録コア機能
 
