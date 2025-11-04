@@ -87,9 +87,52 @@ else
 fi
 echo ""
 
-# Semester作成テスト
-echo -e "${CYAN}[3] POST /api/semesters (サンプルデータ作成)${NC}"
+# 現在の日付を取得（現在の学期テスト用）
+current_date=$(date +%Y-%m-%d)
+current_year=$(date +%Y)
+current_month=$(date +%m)
+
+# 現在の月に応じて学期を決定（Spring: 1-6月, Fall: 7-12月）
+if [ "$current_month" -le 6 ]; then
+    current_period="Spring"
+    start_date="${current_year}-01-01"
+    end_date="${current_year}-06-30"
+else
+    current_period="Fall"
+    start_date="${current_year}-07-01"
+    end_date="${current_year}-12-31"
+fi
+
+# Semester作成テスト（現在の学期）
+echo -e "${CYAN}[3] POST /api/semesters (現在の学期を作成)${NC}"
+echo "   日付範囲: ${start_date} ～ ${end_date}"
 create_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/semesters \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"year\": ${current_year},
+    \"period\": \"${current_period}\",
+    \"startDate\": \"${start_date}\",
+    \"endDate\": \"${end_date}\"
+  }")
+
+create_status=$(echo "$create_response" | tail -n 1)
+create_body=$(echo "$create_response" | sed '$d')
+
+if [ "$create_status" = "201" ] || [ "$create_status" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $create_status - 現在の学期を作成しました${NC}"
+    echo "$create_body" | jq '.' 2>/dev/null || echo "$create_body"
+elif [ "$create_status" = "500" ]; then
+    echo -e "${YELLOW}⚠ HTTP $create_status - API内部エラー${NC}"
+    echo -e "${CYAN}※ DateTime UTC問題の可能性があります（既知の問題）${NC}"
+else
+    echo -e "${YELLOW}⚠ HTTP $create_status${NC}"
+    echo -e "${CYAN}※ 既にデータが存在する場合は正常です${NC}"
+fi
+echo ""
+
+# Semester作成テスト（過去の学期）
+echo -e "${CYAN}[3-2] POST /api/semesters (過去の学期を作成)${NC}"
+create_response2=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/semesters \
   -H "Content-Type: application/json" \
   -d '{
     "year": 2024,
@@ -98,17 +141,14 @@ create_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/
     "endDate": "2024-07-31"
   }')
 
-create_status=$(echo "$create_response" | tail -n 1)
-create_body=$(echo "$create_response" | sed '$d')
+create_status2=$(echo "$create_response2" | tail -n 1)
 
-if [ "$create_status" = "201" ] || [ "$create_status" = "200" ]; then
-    echo -e "${GREEN}✓ HTTP $create_status - Semesterを作成しました${NC}"
-    echo "$create_body" | jq '.' 2>/dev/null || echo "$create_body"
-elif [ "$create_status" = "500" ]; then
-    echo -e "${YELLOW}⚠ HTTP $create_status - API内部エラー${NC}"
-    echo -e "${CYAN}※ DateTime UTC問題の可能性があります（既知の問題）${NC}"
+if [ "$create_status2" = "201" ] || [ "$create_status2" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $create_status2 - 過去の学期を作成しました${NC}"
+elif [ "$create_status2" = "500" ]; then
+    echo -e "${YELLOW}⚠ HTTP $create_status2 - API内部エラー${NC}"
 else
-    echo -e "${YELLOW}⚠ HTTP $create_status${NC}"
+    echo -e "${YELLOW}⚠ HTTP $create_status2${NC}"
     echo -e "${CYAN}※ 既にデータが存在する場合は正常です${NC}"
 fi
 echo ""
@@ -232,15 +272,27 @@ echo ""
 
 # 現在の学期取得テスト
 echo -e "${CYAN}[11] GET /api/semesters/current (現在の学期を取得)${NC}"
+echo "   現在日付: ${current_date}"
 current_semester_response=$(curl -s -w "\n%{http_code}" http://localhost:8080/api/semesters/current)
 current_semester_status=$(echo "$current_semester_response" | tail -n 1)
+current_semester_body=$(echo "$current_semester_response" | sed '$d')
 
 if [ "$current_semester_status" = "200" ]; then
-    echo -e "${GREEN}✓ HTTP $current_semester_status${NC}"
-    echo "$current_semester_response" | sed '$d' | jq '.' 2>/dev/null
+    echo -e "${GREEN}✓ HTTP $current_semester_status - 現在の学期が見つかりました${NC}"
+    echo "$current_semester_body" | jq '.' 2>/dev/null || echo "$current_semester_body"
+
+    # 取得した学期情報を検証
+    retrieved_year=$(echo "$current_semester_body" | jq -r '.year' 2>/dev/null)
+    retrieved_period=$(echo "$current_semester_body" | jq -r '.period' 2>/dev/null)
+
+    if [ "$retrieved_year" = "$current_year" ] && [ "$retrieved_period" = "$current_period" ]; then
+        echo -e "${GREEN}   ✓ 想定通りの学期 (${current_year} ${current_period}) が取得されました${NC}"
+    else
+        echo -e "${YELLOW}   ⚠ 想定外の学期が取得されました (期待: ${current_year} ${current_period}, 実際: ${retrieved_year} ${retrieved_period})${NC}"
+    fi
 elif [ "$current_semester_status" = "404" ]; then
     echo -e "${YELLOW}⚠ HTTP $current_semester_status - 現在の学期が見つかりません${NC}"
-    echo -e "${CYAN}※ テストデータの日付範囲外の場合は正常です${NC}"
+    echo -e "${CYAN}※ 現在日付が学期の日付範囲外の可能性があります${NC}"
 else
     echo -e "${RED}✗ HTTP $current_semester_status${NC}"
 fi
