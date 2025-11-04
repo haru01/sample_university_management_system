@@ -27,12 +27,19 @@ public class SemesterConfiguration : IEntityTypeConfiguration<Semester>
         builder.Ignore(s => s.Id);
 
         // その他のプロパティ
+        // DateTime型をUTCとして扱う（PostgreSQL timestamp with time zone 対応）
         builder.Property(s => s.StartDate)
             .HasColumnName("start_date")
+            .HasConversion(
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc),  // DBへ保存時
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc))  // DBから読み込み時
             .IsRequired();
 
         builder.Property(s => s.EndDate)
             .HasColumnName("end_date")
+            .HasConversion(
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc),
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc))
             .IsRequired();
 
         // ドメインイベントは永続化しない
