@@ -25,7 +25,7 @@
 |---------|--------------|------|----------|
 | CreateStudentCommandHandler | CreateStudentCommand | 学生を登録 | ✅ 完了 |
 | GetStudentsQueryHandler | GetStudentsQuery | 学生一覧を取得 | ✅ 完了 |
-| GetStudentQueryHandler | GetStudentQuery | 学生を取得 | ⬜ 未実装 |
+| GetStudentQueryHandler | GetStudentQuery | 学生を取得 | ✅ 完了 |
 | UpdateStudentCommandHandler | UpdateStudentCommand | 学生情報を更新 | ✅ 完了 |
 
 ### 学期管理 (Phase 3 - 未実装)
@@ -386,6 +386,49 @@ Scenario: 学生が1件も登録されていない場合
 - デフォルトソート: 登録日時の昇順
 - 名前とメールアドレスは部分一致
 - ページネーション未実装
+
+**実装状態:** ✅ 完了
+
+---
+
+### ✅ US-S04: 学生を取得できる
+
+**ストーリー:**
+API利用者として、学生IDを指定して特定の学生情報を取得できるようにしたい。なぜなら、学生の詳細情報を表示したり、編集フォームに学生情報をロードする必要があるから。
+
+**Handler:** `GetStudentQueryHandler : IRequestHandler<GetStudentQuery, StudentDto>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 存在する学生IDで学生を取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - Name: "山田太郎"
+    - Email: "yamada@example.com"
+    - Grade: 2
+  When GetStudentQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then StudentDtoが返される
+  And 学生IDが "123e4567-e89b-12d3-a456-426614174000" である
+  And 学生名が "山田太郎" である
+  And メールアドレスが "yamada@example.com" である
+  And 学年が 2 である
+```
+
+```gherkin
+Scenario: 存在しない学生IDで取得を試みる
+  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
+  When GetStudentQueryを実行する
+    - StudentId: "99999999-9999-9999-9999-999999999999"
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "not found" が含まれる
+```
+
+**制約:**
+
+- 学生IDはGUID形式
+- 存在しない学生の場合はKeyNotFoundException
 
 **実装状態:** ✅ 完了
 

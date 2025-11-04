@@ -1,5 +1,6 @@
 using Enrollments.Application.Commands.CreateStudent;
 using Enrollments.Application.Commands.UpdateStudent;
+using Enrollments.Application.Queries.GetStudent;
 using Enrollments.Application.Queries.GetStudents;
 using Enrollments.Application.Queries.Students;
 using Enrollments.Domain.Exceptions;
@@ -80,15 +81,23 @@ public class StudentsController : ControllerBase
     }
 
     /// <summary>
-    /// 学生取得（プレースホルダー）
+    /// 学生取得
     /// </summary>
     [HttpGet("{studentId}")]
     [ProducesResponseType(typeof(StudentDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult<StudentDto> GetStudent(Guid studentId)
+    public async Task<ActionResult<StudentDto>> GetStudent(Guid studentId, CancellationToken cancellationToken)
     {
-        // US-S02で実装予定
-        return StatusCode(StatusCodes.Status501NotImplemented);
+        try
+        {
+            var query = new GetStudentQuery { StudentId = studentId };
+            var student = await _mediator.Send(query, cancellationToken);
+            return Ok(student);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     /// <summary>

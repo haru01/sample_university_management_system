@@ -36,5 +36,14 @@ public class StudentBuilder
         return this;
     }
 
-    public Student Build() => Student.Create(_name, _email, _grade);
+    public Student Build()
+    {
+        var student = Student.Create(_name, _email, _grade);
+
+        // IDを設定するためにリフレクションを使用（テスト目的のみ）
+        var idProperty = typeof(Student).BaseType!.GetProperty("Id");
+        idProperty!.SetValue(student, _id);
+
+        return student;
+    }
 }
