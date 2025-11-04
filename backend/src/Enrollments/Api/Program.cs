@@ -1,6 +1,7 @@
 using System.Reflection;
 using Enrollments.Api.Middleware;
 using Enrollments.Domain.CourseAggregate;
+using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Domain.StudentAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
@@ -39,6 +40,7 @@ builder.Services.AddDbContext<CoursesDbContext>(options =>
 // Repositories
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 
 // MediatR - CommandHandlers/QueryHandlersを自動登録
 builder.Services.AddMediatR(cfg =>

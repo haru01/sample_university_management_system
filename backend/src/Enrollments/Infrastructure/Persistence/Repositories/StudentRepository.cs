@@ -53,10 +53,10 @@ public class StudentRepository : IStudentRepository
             sqlQuery = sqlQuery.Where(s => s.Email.Contains(query.Email));
         }
 
-        // 登録日時の昇順（IDのValue でソート）
-        return await sqlQuery
-            .OrderBy(s => s.Id.Value)
-            .ToListAsync();
+        // 登録日時の昇順（IDでソート）
+        // AsEnumerableで一旦メモリに読み込んでからソート
+        var students = await sqlQuery.ToListAsync();
+        return [.. students.OrderBy(s => s.Id.Value)];
     }
 
     public async Task AddAsync(Student student)
