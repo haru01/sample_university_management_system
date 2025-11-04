@@ -55,7 +55,7 @@ public class CreateSemesterCommandHandlerTests : IDisposable
         Assert.Equal("Spring", semesterId.Period);
 
         var savedSemester = await _context.Semesters
-            .FirstOrDefaultAsync(s => s.Id.Year == 2024 && s.Id.Period == "Spring");
+            .FirstOrDefaultAsync(s => EF.Property<int>(s, "_idYear") == 2024 && EF.Property<string>(s, "_idPeriod") == "Spring");
         Assert.NotNull(savedSemester);
         Assert.Equal(new DateTime(2024, 4, 1), savedSemester.StartDate);
         Assert.Equal(new DateTime(2024, 9, 30), savedSemester.EndDate);
@@ -174,7 +174,7 @@ public class CreateSemesterCommandHandlerTests : IDisposable
         Assert.Equal(validPeriod, semesterId.Period);
 
         var savedSemester = await _context.Semesters
-            .FirstOrDefaultAsync(s => s.Id.Year == 2024 && s.Id.Period == validPeriod);
+            .FirstOrDefaultAsync(s => EF.Property<int>(s, "_idYear") == 2024 && EF.Property<string>(s, "_idPeriod") == validPeriod);
         Assert.NotNull(savedSemester);
     }
 
@@ -200,7 +200,7 @@ public class CreateSemesterCommandHandlerTests : IDisposable
         Assert.Equal(validYear, semesterId.Year);
 
         var savedSemester = await _context.Semesters
-            .FirstOrDefaultAsync(s => s.Id.Year == validYear && s.Id.Period == "Spring");
+            .FirstOrDefaultAsync(s => EF.Property<int>(s, "_idYear") == validYear && EF.Property<string>(s, "_idPeriod") == "Spring");
         Assert.NotNull(savedSemester);
     }
 
