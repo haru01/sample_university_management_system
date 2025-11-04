@@ -1,12 +1,12 @@
-# Application層 実装パターン（CQRS）
+# Application層 実装パターン（CQRS + MediatR）
 
 ## CQRS 基本パターン
 
-Command（書き込み）とQuery（読み取り）を明確に分離。
+Command（書き込み）とQuery（読み取り）を明確に分離し、**MediatR**を使用してハンドラーへの自動ディスパッチを実現します。
 
 ```csharp
-// Command: 状態を変更する操作（単純なrecord型で十分）
-public record CreateCourseCommand
+// Command: 状態を変更する操作
+public record CreateCourseCommand : IRequest<string>
 {
     public required string CourseCode { get; init; }
     public required string Name { get; init; }
@@ -14,28 +14,37 @@ public record CreateCourseCommand
     public required int MaxCapacity { get; init; }
 }
 
-// Query: データを取得する操作（単純なrecord型で十分）
-public record GetCoursesQuery
+// Query: データを取得する操作
+public record GetCoursesQuery : IRequest<List<CourseDto>>
 {
     // フィルタ条件などがあれば定義
 }
 
-// Service: 各ユースケースごとに専用インターフェースを定義
-public interface ICreateCourseService
+// CommandHandler: Commandを処理
+public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, string>
 {
-    Task<string> CreateCourseAsync(CreateCourseCommand command);
+    public Task<string> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
+    {
+        // 実装
+    }
 }
 
-public interface IGetCoursesService
+// QueryHandler: Queryを処理
+public class GetCoursesQueryHandler : IRequestHandler<GetCoursesQuery, List<CourseDto>>
 {
-    Task<List<CourseDto>> GetCoursesAsync();
+    public Task<List<CourseDto>> Handle(GetCoursesQuery request, CancellationToken cancellationToken)
+    {
+        // 実装
+    }
 }
 ```
 
 **設計方針:**
-- CommandやQueryに汎用的なインターフェース（`ICommand<T>`等）は不要（YAGNI原則）
-- 各Serviceに専用インターフェースを定義し、明確な契約を提供
-- 命名規則: `I{動詞}{名詞}Service` (例: `ICreateCourseService`, `IGetCoursesService`)
+- **MediatR**を使用してCommandとQueryを型安全に自動ディスパッチ
+- Command/Queryは`IRequest<TResponse>`を実装
+- 各Handlerは`IRequestHandler<TRequest, TResponse>`を実装
+- コントローラはMediatorを通じてHandlerを呼び出す（Handlerの具体実装を知る必要がない）
+- 命名規則: `{Command/Query}Handler` (例: `CreateCourseCommandHandler`, `GetCoursesQueryHandler`)
 
 ---
 
@@ -43,7 +52,7 @@ public interface IGetCoursesService
 
 ### Command定義
 ```csharp
-public record EnrollStudentCommand
+public record EnrollStudentCommand : IRequest<EnrollmentId>
 {
     public required Guid StudentId { get; init; }
     public required string CourseCode { get; init; }
@@ -52,24 +61,16 @@ public record EnrollStudentCommand
 }
 ```
 
-### Service インターフェース定義
+### CommandHandler実装
 ```csharp
-public interface IEnrollStudentService
-{
-    Task<EnrollmentId> EnrollStudentAsync(EnrollStudentCommand command);
-}
-```
-
-### Service実装
-```csharp
-public class EnrollStudentService : IEnrollStudentService
+public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand, EnrollmentId>
 {
     private readonly IEnrollmentRepository _enrollmentRepository;
     private readonly IStudentRepository _studentRepository;
     private readonly ICourseRepository _courseRepository;
     private readonly EnrollmentDomainService _domainService;
 
-    public EnrollStudentService(
+    public EnrollStudentCommandHandler(
         IEnrollmentRepository enrollmentRepository,
         IStudentRepository studentRepository,
         ICourseRepository courseRepository,
@@ -81,24 +82,26 @@ public class EnrollStudentService : IEnrollStudentService
         _domainService = domainService;
     }
 
-    public async Task<EnrollmentId> EnrollStudentAsync(EnrollStudentCommand command)
+    public async Task<EnrollmentId> Handle(
+        EnrollStudentCommand request,
+        CancellationToken cancellationToken)
     {
         // 1. 値オブジェクトの構築
-        var studentId = new StudentId(command.StudentId);
-        var courseCode = new CourseCode(command.CourseCode);
+        var studentId = new StudentId(request.StudentId);
+        var courseCode = new CourseCode(request.CourseCode);
         var semester = new Semester(
-            command.SemesterYear,
-            Enum.Parse<SemesterPeriod>(command.SemesterPeriod));
+            request.SemesterYear,
+            Enum.Parse<SemesterPeriod>(request.SemesterPeriod));
 
         // 2. 必要なエンティティの取得
-        var student = await _studentRepository.GetByIdAsync(studentId)
+        var student = await _studentRepository.GetByIdAsync(studentId, cancellationToken)
             ?? throw new NotFoundException($"Student {studentId} not found");
 
-        var course = await _courseRepository.GetByCodeAsync(courseCode)
+        var course = await _courseRepository.GetByCodeAsync(courseCode, cancellationToken)
             ?? throw new NotFoundException($"Course {courseCode} not found");
 
         var existingEnrollments = await _enrollmentRepository
-            .GetByStudentIdAsync(studentId);
+            .GetByStudentIdAsync(studentId, cancellationToken);
 
         // 3. ビジネスルールの検証（ドメインサービス）
         if (!_domainService.CanEnroll(student, course, existingEnrollments))
@@ -110,22 +113,47 @@ public class EnrollStudentService : IEnrollStudentService
         var enrollment = Enrollment.Create(studentId, courseCode, semester);
 
         // 5. リポジトリへの永続化
-        await _enrollmentRepository.AddAsync(enrollment);
+        await _enrollmentRepository.AddAsync(enrollment, cancellationToken);
 
         // 6. Unit of Workパターンでトランザクションコミット
-        await _enrollmentRepository.SaveChangesAsync();
+        await _enrollmentRepository.SaveChangesAsync(cancellationToken);
 
         return enrollment.Id;
     }
 }
 ```
 
-### Serviceのパターン（Command側）
+### コントローラからの呼び出し
+```csharp
+[ApiController]
+[Route("api/enrollments")]
+public class EnrollmentsController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public EnrollmentsController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> EnrollStudent(
+        EnrollStudentCommand command,
+        CancellationToken cancellationToken)
+    {
+        var enrollmentId = await _mediator.Send(command, cancellationToken);
+        return Ok(new { EnrollmentId = enrollmentId.Value });
+    }
+}
+```
+
+### CommandHandlerのパターン
 1. **入力の変換**: プリミティブ型 → 値オブジェクト
 2. **エンティティ取得**: リポジトリから必要な集約を取得
 3. **ビジネスロジック実行**: ドメインサービスや集約メソッド呼び出し
 4. **永続化**: リポジトリのSaveChangesAsync()でUnit of Work完結
 5. **結果返却**: 生成されたIDやサマリーを返す
+6. **CancellationToken**: 全ての非同期メソッドでCancellationTokenを伝播
 
 ---
 
@@ -133,7 +161,7 @@ public class EnrollStudentService : IEnrollStudentService
 
 ### Query定義
 ```csharp
-public record GetEnrollmentsByStudentQuery
+public record GetEnrollmentsByStudentQuery : IRequest<List<EnrollmentSummaryDto>>
 {
     public required Guid StudentId { get; init; }
     public string? Status { get; init; }
@@ -153,29 +181,23 @@ public record EnrollmentSummaryDto
 }
 ```
 
-### Service インターフェース定義
+### QueryHandler実装
 ```csharp
-public interface IGetEnrollmentsByStudentService
-{
-    Task<List<EnrollmentSummaryDto>> GetEnrollmentsByStudentAsync(GetEnrollmentsByStudentQuery query);
-}
-```
-
-### Service実装
-```csharp
-public class GetEnrollmentsByStudentService : IGetEnrollmentsByStudentService
+public class GetEnrollmentsByStudentQueryHandler
+    : IRequestHandler<GetEnrollmentsByStudentQuery, List<EnrollmentSummaryDto>>
 {
     private readonly EnrollmentDbContext _context;
 
-    public GetEnrollmentsByStudentService(EnrollmentDbContext context)
+    public GetEnrollmentsByStudentQueryHandler(EnrollmentDbContext context)
     {
         _context = context;
     }
 
-    public async Task<List<EnrollmentSummaryDto>> GetEnrollmentsByStudentAsync(
-        GetEnrollmentsByStudentQuery query)
+    public async Task<List<EnrollmentSummaryDto>> Handle(
+        GetEnrollmentsByStudentQuery request,
+        CancellationToken cancellationToken)
     {
-        var studentId = new StudentId(query.StudentId);
+        var studentId = new StudentId(request.StudentId);
 
         var queryable = _context.Enrollments
             .AsNoTracking() // 読み取り専用のため変更追跡を無効化
@@ -183,9 +205,9 @@ public class GetEnrollmentsByStudentService : IGetEnrollmentsByStudentService
             .Where(e => e.StudentId == studentId);
 
         // オプショナルフィルタ
-        if (!string.IsNullOrEmpty(query.Status))
+        if (!string.IsNullOrEmpty(request.Status))
         {
-            queryable = queryable.Where(e => e.Status.Value == query.Status);
+            queryable = queryable.Where(e => e.Status.Value == request.Status);
         }
 
         return await queryable
@@ -200,12 +222,43 @@ public class GetEnrollmentsByStudentService : IGetEnrollmentsByStudentService
             })
             .OrderBy(e => e.SemesterYear)
             .ThenBy(e => e.CourseCode)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 }
 ```
 
-### Serviceのパターン（Query側）
+### コントローラからの呼び出し
+```csharp
+[ApiController]
+[Route("api/enrollments")]
+public class EnrollmentsController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public EnrollmentsController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpGet("student/{studentId}")]
+    public async Task<IActionResult> GetEnrollmentsByStudent(
+        Guid studentId,
+        [FromQuery] string? status,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetEnrollmentsByStudentQuery
+        {
+            StudentId = studentId,
+            Status = status
+        };
+        var enrollments = await _mediator.Send(query, cancellationToken);
+        return Ok(enrollments);
+    }
+}
+```
+
+### QueryHandlerのパターン
+
 1. **AsNoTracking()**: 変更追跡を無効化してパフォーマンス向上
 2. **Include()**: N+1問題を回避
 3. **Select()でDTO投影**: 必要な列のみ取得
@@ -292,27 +345,34 @@ public partial record CourseCode
 }
 ```
 
-### Application Serviceでのバリデーション流れ
+### CommandHandlerでのバリデーション流れ
 
 ```csharp
-public class CreateCourseService : ICreateCourseService
+public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, string>
 {
-    public async Task<string> CreateCourseAsync(CreateCourseCommand command)
+    private readonly ICourseRepository _courseRepository;
+
+    public CreateCourseCommandHandler(ICourseRepository courseRepository)
+    {
+        _courseRepository = courseRepository;
+    }
+
+    public async Task<string> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
     {
         // 1. 値オブジェクト構築（ここで形式バリデーション実行）
-        var courseCode = new CourseCode(command.CourseCode); // ← ArgumentException発生の可能性
+        var courseCode = new CourseCode(request.CourseCode); // ← ArgumentException発生の可能性
 
         // 2. ビジネスルールバリデーション
-        var existing = await _courseRepository.GetByCodeAsync(courseCode);
+        var existing = await _courseRepository.GetByCodeAsync(courseCode, cancellationToken);
         if (existing != null)
             throw new InvalidOperationException($"Course with code {courseCode} already exists");
 
         // 3. 集約生成（ここでドメインルールバリデーション実行）
-        var course = Course.Create(courseCode, command.Name, command.Credits, command.MaxCapacity);
+        var course = Course.Create(courseCode, request.Name, request.Credits, request.MaxCapacity);
         // ← ArgumentException発生の可能性
 
-        await _courseRepository.AddAsync(course);
-        await _courseRepository.SaveChangesAsync();
+        await _courseRepository.AddAsync(course, cancellationToken);
+        await _courseRepository.SaveChangesAsync(cancellationToken);
 
         return course.Id.Value;
     }
@@ -325,7 +385,7 @@ public class CreateCourseService : ICreateCourseService
 |------|------------------|---------|--------|
 | 値オブジェクト | 形式・フォーマット | コンストラクタ内 | `ArgumentException` |
 | 集約 | ビジネスルール | ファクトリメソッド・更新メソッド内 | `ArgumentException` |
-| Application Service | 重複チェック・存在確認 | Service内 | `InvalidOperationException` |
+| CommandHandler | 重複チェック・存在確認 | Handler内 | `InvalidOperationException` |
 | データベース | データ整合性制約 | DB制約（UNIQUE等） | `DbUpdateException` |
 
 ---
@@ -340,28 +400,104 @@ await _dbContext.SaveChangesAsync(cancellationToken);
 
 ### 明示的トランザクション（複雑な操作時）
 ```csharp
-public async Task<Result> Handle(ComplexCommand command, CancellationToken cancellationToken)
+public class ComplexCommandHandler : IRequestHandler<ComplexCommand, Result>
 {
-    await using var transaction = await _dbContext.Database
-        .BeginTransactionAsync(cancellationToken);
+    private readonly EnrollmentDbContext _dbContext;
+    private readonly IEnrollmentRepository _enrollmentRepository;
+    private readonly IExternalService _externalService;
 
-    try
+    public ComplexCommandHandler(
+        EnrollmentDbContext dbContext,
+        IEnrollmentRepository enrollmentRepository,
+        IExternalService externalService)
     {
-        // 複数の操作
-        await _enrollmentRepository.AddAsync(enrollment);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await _externalService.NotifyAsync(enrollment.Id);
-
-        await transaction.CommitAsync(cancellationToken);
-        return Result.Success();
+        _dbContext = dbContext;
+        _enrollmentRepository = enrollmentRepository;
+        _externalService = externalService;
     }
-    catch
+
+    public async Task<Result> Handle(ComplexCommand request, CancellationToken cancellationToken)
     {
-        await transaction.RollbackAsync(cancellationToken);
-        throw;
+        await using var transaction = await _dbContext.Database
+            .BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            // 複数の操作
+            await _enrollmentRepository.AddAsync(enrollment, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            await _externalService.NotifyAsync(enrollment.Id, cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+            return Result.Success();
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 }
+```
+
+### MediatRパイプライン Behavior（トランザクション自動化）
+
+複数のCommandHandlerで共通するトランザクション処理をPipeline Behaviorとして実装することで、重複コードを削減できます。
+
+```csharp
+public class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
+{
+    private readonly EnrollmentDbContext _dbContext;
+    private readonly ILogger<TransactionBehavior<TRequest, TResponse>> _logger;
+
+    public TransactionBehavior(
+        EnrollmentDbContext dbContext,
+        ILogger<TransactionBehavior<TRequest, TResponse>> logger)
+    {
+        _dbContext = dbContext;
+        _logger = logger;
+    }
+
+    public async Task<TResponse> Handle(
+        TRequest request,
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken cancellationToken)
+    {
+        // Queryの場合はトランザクション不要
+        if (request is IQuery<TResponse>)
+        {
+            return await next();
+        }
+
+        // Commandの場合のみトランザクション開始
+        _logger.LogInformation("Starting transaction for {CommandName}", typeof(TRequest).Name);
+
+        await using var transaction = await _dbContext.Database
+            .BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var response = await next();
+            await transaction.CommitAsync(cancellationToken);
+            _logger.LogInformation("Committed transaction for {CommandName}", typeof(TRequest).Name);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Rolling back transaction for {CommandName}", typeof(TRequest).Name);
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+}
+
+// マーカーインターフェース（Query識別用）
+public interface IQuery<out TResponse> : IRequest<TResponse> { }
+
+// 使用例
+public record GetCoursesQuery : IQuery<List<CourseDto>> { }
 ```
 
 ---
@@ -445,21 +581,36 @@ public class GlobalExceptionMiddleware
    - Commandは状態変更のみ、Queryは読み取りのみ
    - Commandの戻り値は最小限（IDやサマリー）
    - Queryは常にAsNoTracking()を使用
+   - QueryにはIQuery<T>マーカーインターフェースを使用（トランザクション制御の判定に利用）
 
-2. **バリデーション階層**
-   - 入力形式: FluentValidationで検証
-   - ビジネスルール: ドメイン層で検証
+2. **MediatR活用**
+   - コントローラはMediatorのみに依存（具体的なHandlerを知らない）
+   - Pipeline Behaviorで横断的関心事を実装（バリデーション、トランザクション、ログ等）
+   - Handlerは単一責任原則に従う（1 Handler = 1ユースケース）
+   - Handlerの命名は`{Command/Query名}Handler`とする
+
+3. **バリデーション階層**
+   - 入力形式: 値オブジェクトのコンストラクタで検証
+   - ビジネスルール: ドメイン層（集約、ドメインサービス）で検証
    - データ整合性: データベース制約で保証
+   - 複雑なバリデーションはPipeline Behaviorで実装可能
 
-3. **トランザクション原則**
+4. **トランザクション原則**
    - 1 Command = 1トランザクション
+   - Pipeline Behaviorで自動トランザクション管理を推奨
    - 複数集約の更新は避ける（イベント駆動で分離）
    - 長時間トランザクションは禁止
 
-4. **パフォーマンス最適化**
+5. **パフォーマンス最適化**
    - Query側ではInclude()でN+1問題を回避
    - 大量データはページング必須
    - 複雑な集計はDapperや生SQLも検討
+   - CancellationTokenを全ての非同期メソッドで伝播
+
+6. **依存性注入**
+   - MediatR自動登録: `services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()))`
+   - Pipeline Behaviorの登録順序に注意（バリデーション → トランザクション → ログ）
+   - Handlerはスコープライフタイムで登録される
 
 ---
 

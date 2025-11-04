@@ -7,52 +7,54 @@
 
 **対象範囲:** Applicationレイヤーの統合テスト（CommandHandler, QueryHandler, Repository層を含む）
 
-## Application Service一覧
+**実装パターン:** MediatRを使用したCQRSパターン
+
+## CommandHandler/QueryHandler一覧
 
 ### コース管理 (Phase 1 - 完了)
 
-| Command/Query | 説明 | 実装状態 |
-|--------------|------|----------|
-| CreateCourseCommand | コースを登録 | ✅ 完了 |
-| GetCoursesQuery | コース一覧を取得 | ✅ 完了 |
-| GetCourseQuery | コースを取得 | ✅ 完了 |
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| CreateCourseCommandHandler | CreateCourseCommand | コースを登録 | ✅ 完了 |
+| GetCoursesQueryHandler | GetCoursesQuery | コース一覧を取得 | ✅ 完了 |
+| GetCourseByCodeQueryHandler | GetCourseByCodeQuery | コースを取得 | ✅ 完了 |
 
 ### 学生管理 (Phase 2 - 完了)
 
-| Command/Query | 説明 | 実装状態 |
-|--------------|------|----------|
-| CreateStudentCommand | 学生を登録 | ✅ 完了 |
-| GetStudentsQuery | 学生一覧を取得 | ✅ 完了 |
-| GetStudentQuery | 学生を取得 | ⬜ 未実装 |
-| UpdateStudentCommand | 学生情報を更新 | ✅ 完了 |
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| CreateStudentCommandHandler | CreateStudentCommand | 学生を登録 | ✅ 完了 |
+| GetStudentsQueryHandler | GetStudentsQuery | 学生一覧を取得 | ✅ 完了 |
+| GetStudentQueryHandler | GetStudentQuery | 学生を取得 | ⬜ 未実装 |
+| UpdateStudentCommandHandler | UpdateStudentCommand | 学生情報を更新 | ✅ 完了 |
 
 ### 学期管理 (Phase 3 - 未実装)
 
-| Command/Query | 説明 | 実装状態 |
-|--------------|------|----------|
-| CreateSemesterCommand | 学期を登録 | ⬜ 未実装 |
-| GetSemestersQuery | 学期一覧を取得 | ⬜ 未実装 |
-| GetCurrentSemesterQuery | 現在の学期を取得 | ⬜ 未実装 |
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| CreateSemesterCommandHandler | CreateSemesterCommand | 学期を登録 | ⬜ 未実装 |
+| GetSemestersQueryHandler | GetSemestersQuery | 学期一覧を取得 | ⬜ 未実装 |
+| GetCurrentSemesterQueryHandler | GetCurrentSemesterQuery | 現在の学期を取得 | ⬜ 未実装 |
 
 ### 履修登録 (Phase 4 - 未実装)
 
-| Command/Query | 説明 | 実装状態 |
-|--------------|------|----------|
-| EnrollStudentCommand | 履修登録 | ⬜ 未実装 |
-| CancelEnrollmentCommand | 履修登録キャンセル | ⬜ 未実装 |
-| GetStudentEnrollmentsQuery | 履修登録一覧を取得 | ⬜ 未実装 |
-| CompleteEnrollmentCommand | 履修登録を完了 | ⬜ 未実装 |
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| EnrollStudentCommandHandler | EnrollStudentCommand | 履修登録 | ⬜ 未実装 |
+| CancelEnrollmentCommandHandler | CancelEnrollmentCommand | 履修登録キャンセル | ⬜ 未実装 |
+| GetStudentEnrollmentsQueryHandler | GetStudentEnrollmentsQuery | 履修登録一覧を取得 | ⬜ 未実装 |
+| CompleteEnrollmentCommandHandler | CompleteEnrollmentCommand | 履修登録を完了 | ⬜ 未実装 |
 
 ---
 
 ## エピック1: コース管理
 
-### ✅ US-E01: CreateCourseService - コースを登録できる
+### ✅ US-E01: コースを登録できる
 
 **ストーリー:**
 API利用者として、新しいコースを登録できるようにしたい。なぜなら、学生が履修登録するためにはコース情報が必要だから。
 
-**Service:** `ICreateCourseService.CreateCourseAsync(CreateCourseCommand)`
+**Handler:** `CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, string>`
 
 **受け入れ条件:**
 
@@ -117,12 +119,12 @@ Scenario: 既に存在するコースコードで登録を試みる
 
 ---
 
-### ✅ US-E02: GetCoursesService - コース一覧を取得できる
+### ✅ US-E02: コース一覧を取得できる
 
 **ストーリー:**
 API利用者として、登録されているコース一覧を取得できるようにしたい。なぜなら、履修可能なコースを表示するためにコース情報が必要だから。
 
-**Service:** `IGetCoursesService.GetCoursesAsync()`
+**Handler:** `GetCoursesQueryHandler : IRequestHandler<GetCoursesQuery, List<CourseDto>>`
 
 **受け入れ条件:**
 
@@ -156,12 +158,12 @@ Scenario: コースが1件も登録されていない場合
 
 ---
 
-### ✅ US-E03: GetCourseByCodeService - コースを取得できる
+### ✅ US-E03: コースを取得できる
 
 **ストーリー:**
 API利用者として、コースコードを指定して特定のコースの詳細情報を取得できるようにしたい。なぜなら、履修登録前にコースの詳細を確認する必要があるから。
 
-**Service:** `IGetCourseByCodeService.GetCourseByCodeAsync(string courseCode)`
+**Handler:** `GetCourseByCodeQueryHandler : IRequestHandler<GetCourseByCodeQuery, CourseDto>`
 
 **受け入れ条件:**
 
@@ -201,12 +203,12 @@ Scenario: 存在しないコースコードで取得を試みる
 
 ## エピック2: 学生管理
 
-### ✅ US-S01: CreateStudentService - 学生を登録できる
+### ✅ US-S01: 学生を登録できる
 
 **ストーリー:**
 API利用者として、新しい学生をシステムに登録できるようにしたい。なぜなら、学生が履修登録するためにはアカウントが必要だから。
 
-**Service:** `ICreateStudentService.CreateStudentAsync(CreateStudentCommand)`
+**Handler:** `CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand, Guid>`
 
 **受け入れ条件:**
 
@@ -256,12 +258,12 @@ Scenario: 不正なメール形式で登録を試みる
 
 ---
 
-### ⬜ US-S02: UpdateStudentService - 学生情報を更新できる
+### ⬜ US-S02: 学生情報を更新できる
 
 **ストーリー:**
 API利用者として、学生情報を更新できるようにしたい。なぜなら、メールアドレスや学年情報が変更になることがあるから。
 
-**Service:** `IUpdateStudentService.UpdateStudentAsync(UpdateStudentCommand)`
+**Handler:** `UpdateStudentCommandHandler : IRequestHandler<UpdateStudentCommand, Unit>`
 
 **受け入れ条件:**
 
@@ -297,12 +299,12 @@ Scenario: 存在しない学生IDで更新を試みる
 
 ---
 
-### ✅ US-S03: GetStudentsService - 学生一覧を取得できる
+### ✅ US-S03: 学生一覧を取得できる
 
 **ストーリー:**
 API利用者として、登録されている学生の一覧を取得できるようにしたい。なぜなら、学生管理画面で全学生を確認したり、特定の条件で学生を検索する必要があるから。
 
-**Service:** `IGetStudentsService.GetStudentsAsync(GetStudentsQuery query)`
+**Handler:** `GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<StudentDto>>`
 
 **受け入れ条件:**
 
@@ -396,7 +398,7 @@ Scenario: 学生が1件も登録されていない場合
 **ストーリー:**
 管理者として、学期情報（年度、学期、期間）を管理できるようにしたい。なぜなら、履修登録は学期ごとに管理される必要があるから。
 
-**Application Service:** `CreateSemesterCommandHandler`
+**Handler:** `CreateSemesterCommandHandler : IRequestHandler<CreateSemesterCommand, SemesterId>`
 
 **受け入れ条件:**
 
@@ -456,7 +458,7 @@ Scenario: 終了日が開始日より前の学期を登録しようとする
 **ストーリー:**
 学生・教員として、登録されている学期の一覧を取得できるようにしたい。なぜなら、履修登録時に選択可能な学期を表示する必要があるから。
 
-**Application Service:** `GetSemestersQueryHandler`
+**Handler:** `GetSemestersQueryHandler : IRequestHandler<GetSemestersQuery, List<SemesterDto>>`
 
 **受け入れ条件:**
 
@@ -503,7 +505,7 @@ Scenario: 学期が1件も登録されていない場合
 **ストーリー:**
 学生・教員として、現在の学期情報を簡単に取得できるようにしたい。なぜなら、履修登録画面で現在の学期を表示する必要があるから。
 
-**Application Service:** `GetCurrentSemesterQueryHandler`
+**Handler:** `GetCurrentSemesterQueryHandler : IRequestHandler<GetCurrentSemesterQuery, SemesterDto>`
 
 **受け入れ条件:**
 
@@ -539,12 +541,12 @@ Scenario: 現在の学期が存在しない場合
 
 ## エピック4: 履修登録
 
-### ⬜ US-R01: EnrollStudentService - コースを履修登録できる
+### ⬜ US-R01: コースを履修登録できる
 
 **ストーリー:**
 API利用者として、学生がコースを履修登録できるようにしたい。なぜなら、学期の授業を受講するためには事前に履修登録が必要だから。
 
-**Service:** `IEnrollStudentService.EnrollStudentAsync(EnrollStudentCommand)`
+**Handler:** `EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand, EnrollmentId>`
 
 **受け入れ条件:**
 
@@ -624,12 +626,12 @@ Scenario: 存在しないコースコードで登録を試みる
 
 ---
 
-### ⬜ US-R02: CancelEnrollmentService - 履修登録をキャンセルできる
+### ⬜ US-R02: 履修登録をキャンセルできる
 
 **ストーリー:**
 API利用者として、履修登録をキャンセルできるようにしたい。なぜなら、履修計画を変更したい場合があるから。
 
-**Service:** `ICancelEnrollmentService.CancelEnrollmentAsync(EnrollmentId)`
+**Handler:** `CancelEnrollmentCommandHandler : IRequestHandler<CancelEnrollmentCommand, Unit>`
 
 **受け入れ条件:**
 
@@ -679,7 +681,7 @@ Scenario: 存在しない履修登録IDでキャンセルを試みる
 **ストーリー:**
 学生・教員として、学生の履修登録一覧を取得できるようにしたい。なぜなら、現在の履修状況を確認する必要があるから。
 
-**Application Service:** `GetStudentEnrollmentsQueryHandler`
+**Handler:** `GetStudentEnrollmentsQueryHandler : IRequestHandler<GetStudentEnrollmentsQuery, List<EnrollmentDto>>`
 
 **受け入れ条件:**
 
@@ -737,7 +739,7 @@ Scenario: 存在しない学生IDで一覧を取得しようとする
 **ストーリー:**
 教員・管理者として、学期終了時に履修登録ステータスを完了にできるようにしたい。なぜなら、成績評価に移行するためには履修登録を完了状態にする必要があるから。
 
-**Application Service:** `CompleteEnrollmentCommandHandler`
+**Handler:** `CompleteEnrollmentCommandHandler : IRequestHandler<CompleteEnrollmentCommand, Unit>`
 
 **受け入れ条件:**
 

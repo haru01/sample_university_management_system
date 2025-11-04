@@ -8,6 +8,8 @@
 
 **対象範囲:** Applicationレイヤーの統合テスト（CommandHandler, QueryHandler, Repository層を含む）
 
+**実装パターン:** MediatRを使用したCQRSパターン
+
 ### 責務
 - 成績評価ルールの定義・管理
 - 課題・試験の成績記録
@@ -44,7 +46,7 @@
 **ストーリー:**
 教員（または管理者）として、コースごとに成績評価ルールを設定できるようにしたい。なぜなら、成績計算の基準を明確化する必要があるから。
 
-**Application Service:** `CreateGradingPolicyCommandHandler`
+**Handler:** `CreateGradingPolicyCommandHandler : IRequestHandler<CreateGradingPolicyCommand, GradingPolicyId>`
 
 **受け入れ基準:**
 
@@ -98,7 +100,7 @@ Scenario: 既存の成績評価ルールがある場合のエラー
 **ストーリー:**
 学生または教員として、コースの成績評価ルールを確認できるようにしたい。なぜなら、成績の計算方法を理解する必要があるから。
 
-**Application Service:** `GetGradingPolicyQueryHandler`
+**Handler:** `GetGradingPolicyQueryHandler : IRequestHandler<GetGradingPolicyQuery, GradingPolicyDto>`
 
 **受け入れ基準:**
 
@@ -127,7 +129,7 @@ Scenario: 存在しない成績評価ルールを取得しようとする
 **ストーリー:**
 教員として、課題や試験などの評価項目を作成できるようにしたい。なぜなら、学生の成績を記録する必要があるから。
 
-**Application Service:** `CreateAssessmentCommandHandler`
+**Handler:** `CreateAssessmentCommandHandler : IRequestHandler<CreateAssessmentCommand, AssessmentId>`
 
 **受け入れ基準:**
 
@@ -165,7 +167,7 @@ Scenario: 最大スコアが0以下の場合のエラー
 **ストーリー:**
 教員として、学生の課題・試験のスコアを記録できるようにしたい。なぜなら、成績計算の基礎データを蓄積する必要があるから。
 
-**Application Service:** `RecordAssessmentScoreCommandHandler`
+**Handler:** `RecordAssessmentScoreCommandHandler : IRequestHandler<RecordAssessmentScoreCommand, AssessmentScoreId>`
 
 **受け入れ基準:**
 
@@ -207,7 +209,7 @@ Scenario: 履修登録していない学生へのスコア記録エラー
 **ストーリー:**
 学生または教員として、学生の評価項目ごとのスコアを確認できるようにしたい。なぜなら、現在の成績状況を把握する必要があるから。
 
-**Application Service:** `GetAssessmentScoresQueryHandler`
+**Handler:** `GetAssessmentScoresQueryHandler : IRequestHandler<GetAssessmentScoresQuery, List<AssessmentScoreDto>>`
 
 **受け入れ基準:**
 
@@ -230,7 +232,7 @@ Scenario: 学生の評価項目スコア一覧を取得する
 **ストーリー:**
 教員として、学生の最終成績を自動計算できるようにしたい。なぜなら、成績評価ルールに基づいた正確な成績を算出する必要があるから。
 
-**Application Service:** `CalculateGradeCommandHandler`
+**Handler:** `CalculateGradeCommandHandler : IRequestHandler<CalculateGradeCommand, GradeId>`
 
 **受け入れ基準:**
 
@@ -280,7 +282,7 @@ Scenario: 成績評価ルールが設定されていない場合のエラー
 **ストーリー:**
 教員として、計算済みの最終成績を確定できるようにしたい。なぜなら、成績を正式に記録し、変更不可にする必要があるから。
 
-**Application Service:** `FinalizeGradeCommandHandler`
+**Handler:** `FinalizeGradeCommandHandler : IRequestHandler<FinalizeGradeCommand, Unit>`
 
 **受け入れ基準:**
 
@@ -318,7 +320,7 @@ Scenario: 計算されていない成績を確定しようとするエラー
 **ストーリー:**
 学生として、自分の全コースの成績を確認できるようにしたい。なぜなら、学業成績を把握する必要があるから。
 
-**Application Service:** `GetStudentGradesQueryHandler`
+**Handler:** `GetStudentGradesQueryHandler : IRequestHandler<GetStudentGradesQuery, List<GradeDto>>`
 
 **受け入れ基準:**
 
@@ -344,7 +346,7 @@ Scenario: 学生の学期成績一覧を取得する
 **ストーリー:**
 学生または教職員として、学生の累積GPAを確認できるようにしたい。なぜなら、学業成績の総合評価を把握する必要があるから。
 
-**Application Service:** `CalculateStudentGpaQueryHandler`
+**Handler:** `CalculateStudentGpaQueryHandler : IRequestHandler<CalculateStudentGpaQuery, GpaDto>`
 
 **受け入れ基準:**
 
@@ -376,7 +378,7 @@ Scenario: 学生の累積GPAを計算する
 **ストーリー:**
 学生として、成績証明書を発行できるようにしたい。なぜなら、就職活動や進学に使用する必要があるから。
 
-**Application Service:** `IssueTranscriptCommandHandler`
+**Handler:** `IssueTranscriptCommandHandler : IRequestHandler<IssueTranscriptCommand, TranscriptId>`
 
 **受け入れ基準:**
 

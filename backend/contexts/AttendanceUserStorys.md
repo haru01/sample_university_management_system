@@ -7,36 +7,39 @@
 
 **対象範囲:** Applicationレイヤーの統合テスト（CommandHandler, QueryHandler, Repository層を含む）
 
+**実装パターン:** MediatRを使用したCQRSパターン
+
 **前提条件:**
+
 - 履修管理コンテキスト（Enrollments）が実装済みであること
 - 学生、コース、学期、履修登録のデータが存在すること
 
-## Application Service一覧
+## CommandHandler/QueryHandler一覧
 
 ### 授業セッション管理 (Phase 1 - 未実装)
 
-| Command/Query | 説明 | 実装状態 |
-|--------------|------|----------|
-| CreateSessionCommand | 授業セッションを作成 | ⬜ 未実装 |
-| GetCourseSessionsQuery | コースの授業セッション一覧を取得 | ⬜ 未実装 |
-| GetSessionQuery | 授業セッションを取得 | ⬜ 未実装 |
-| UpdateSessionCommand | 授業セッション情報を更新 | ⬜ 未実装 |
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| CreateSessionCommandHandler | CreateSessionCommand | 授業セッションを作成 | ⬜ 未実装 |
+| GetCourseSessionsQueryHandler | GetCourseSessionsQuery | コースの授業セッション一覧を取得 | ⬜ 未実装 |
+| GetSessionQueryHandler | GetSessionQuery | 授業セッションを取得 | ⬜ 未実装 |
+| UpdateSessionCommandHandler | UpdateSessionCommand | 授業セッション情報を更新 | ⬜ 未実装 |
 
 ### 出席記録管理 (Phase 2 - 未実装)
 
-| Command/Query | 説明 | 実装状態 |
-|--------------|------|----------|
-| RecordAttendanceCommand | 出席を記録 | ⬜ 未実装 |
-| UpdateAttendanceCommand | 出席状態を更新 | ⬜ 未実装 |
-| GetSessionAttendancesQuery | セッションの出席記録一覧を取得 | ⬜ 未実装 |
-| GetStudentAttendancesQuery | 学生の出席記録一覧を取得 | ⬜ 未実装 |
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| RecordAttendanceCommandHandler | RecordAttendanceCommand | 出席を記録 | ⬜ 未実装 |
+| UpdateAttendanceCommandHandler | UpdateAttendanceCommand | 出席状態を更新 | ⬜ 未実装 |
+| GetSessionAttendancesQueryHandler | GetSessionAttendancesQuery | セッションの出席記録一覧を取得 | ⬜ 未実装 |
+| GetStudentAttendancesQueryHandler | GetStudentAttendancesQuery | 学生の出席記録一覧を取得 | ⬜ 未実装 |
 
 ### 出席統計 (Phase 3 - 未実装)
 
-| Query | 説明 | 実装状態 |
-|------|------|----------|
-| GetStudentAttendanceRateQuery | 学生の出席率を取得 | ⬜ 未実装 |
-| GetCourseAttendanceStatisticsQuery | コースの出席統計を取得 | ⬜ 未実装 |
+| Handler | Query | 説明 | 実装状態 |
+|---------|------|------|----------|
+| GetStudentAttendanceRateQueryHandler | GetStudentAttendanceRateQuery | 学生の出席率を取得 | ⬜ 未実装 |
+| GetCourseAttendanceStatisticsQueryHandler | GetCourseAttendanceStatisticsQuery | コースの出席統計を取得 | ⬜ 未実装 |
 
 ---
 
@@ -47,7 +50,7 @@
 **ストーリー:**
 教員として、特定のコース・学期に対して授業セッションを作成できるようにしたい。なぜなら、出席を記録するためには授業の開催情報が必要だから。
 
-**Application Service:** `CreateSessionCommandHandler`
+**Handler:** `CreateSessionCommandHandler : IRequestHandler<CreateSessionCommand, SessionId>`
 
 **受け入れ条件:**
 
@@ -110,7 +113,7 @@ Scenario: 終了時刻が開始時刻より前のセッション作成を試み�
 **ストーリー:**
 教員・学生として、特定のコースの授業セッション一覧を取得できるようにしたい。なぜなら、授業スケジュールを確認する必要があるから。
 
-**Application Service:** `GetCourseSessionsQueryHandler`
+**Handler:** `GetCourseSessionsQueryHandler : IRequestHandler<GetCourseSessionsQuery, List<SessionDto>>`
 
 **受け入れ条件:**
 
@@ -163,7 +166,7 @@ Scenario: 授業セッションが存在しないコースを取得する
 **ストーリー:**
 教員として、授業セッションに対して学生の出席を記録できるようにしたい。なぜなら、学生の出席状況を管理する必要があるから。
 
-**Application Service:** `RecordAttendanceCommandHandler`
+**Handler:** `RecordAttendanceCommandHandler : IRequestHandler<RecordAttendanceCommand, AttendanceId>`
 
 **受け入れ条件:**
 
@@ -223,7 +226,7 @@ Scenario: 不正な出席状態で記録を試みる
 **ストーリー:**
 教員として、記録済みの出席状態を更新できるようにしたい。なぜなら、記録ミスや遅刻の訂正が必要な場合があるから。
 
-**Application Service:** `UpdateAttendanceCommandHandler`
+**Handler:** `UpdateAttendanceCommandHandler : IRequestHandler<UpdateAttendanceCommand, Unit>`
 
 **受け入れ条件:**
 
@@ -263,7 +266,7 @@ Scenario: 存在しない出席記録IDで更新を試みる
 **ストーリー:**
 教員として、特定の授業セッションの出席記録一覧を取得できるようにしたい。なぜなら、授業ごとの出席状況を確認する必要があるから。
 
-**Application Service:** `GetSessionAttendancesQueryHandler`
+**Handler:** `GetSessionAttendancesQueryHandler : IRequestHandler<GetSessionAttendancesQuery, List<AttendanceDto>>`
 
 **受け入れ条件:**
 
@@ -304,7 +307,7 @@ Scenario: 出席状態でフィルタリングする
 **ストーリー:**
 学生・教員として、特定の学生の出席記録一覧を取得できるようにしたい。なぜなら、学生個人の出席履歴を確認する必要があるから。
 
-**Application Service:** `GetStudentAttendancesQueryHandler`
+**Handler:** `GetStudentAttendancesQueryHandler : IRequestHandler<GetStudentAttendancesQuery, List<AttendanceDto>>`
 
 **受け入れ条件:**
 
@@ -349,7 +352,7 @@ Scenario: コースを指定して出席記録を取得する
 **ストーリー:**
 学生・教員として、学生の出席率を計算して取得できるようにしたい。なぜなら、出席状況を評価する必要があるから。
 
-**Application Service:** `GetStudentAttendanceRateQueryHandler`
+**Handler:** `GetStudentAttendanceRateQueryHandler : IRequestHandler<GetStudentAttendanceRateQuery, AttendanceRateDto>`
 
 **受け入れ条件:**
 
@@ -397,7 +400,7 @@ Scenario: コースを指定して出席率を取得する
 **ストーリー:**
 教員として、コース全体の出席統計を取得できるようにしたい。なぜなら、授業運営の改善に活用するためにクラス全体の傾向を把握する必要があるから。
 
-**Application Service:** `GetCourseAttendanceStatisticsQueryHandler`
+**Handler:** `GetCourseAttendanceStatisticsQueryHandler : IRequestHandler<GetCourseAttendanceStatisticsQuery, CourseAttendanceStatisticsDto>`
 
 **受け入れ条件:**
 
