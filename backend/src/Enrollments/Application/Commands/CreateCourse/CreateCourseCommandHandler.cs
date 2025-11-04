@@ -1,24 +1,25 @@
 using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.Exceptions;
+using MediatR;
 
 namespace Enrollments.Application.Commands.CreateCourse;
 
 /// <summary>
-/// コース作成サービス実装
+/// コース作成コマンドハンドラー
 /// </summary>
-public class CreateCourseService : ICreateCourseService
+public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, string>
 {
     private readonly ICourseRepository _courseRepository;
 
-    public CreateCourseService(ICourseRepository courseRepository)
+    public CreateCourseCommandHandler(ICourseRepository courseRepository)
     {
         _courseRepository = courseRepository;
     }
 
-    public async Task<string> CreateCourseAsync(CreateCourseCommand command)
+    public async Task<string> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
     {
         // 値オブジェクト構築
-        var courseCode = new CourseCode(command.CourseCode);
+        var courseCode = new CourseCode(request.CourseCode);
 
         // 重複チェック
         var existing = await _courseRepository.GetByCodeAsync(courseCode);
@@ -28,9 +29,9 @@ public class CreateCourseService : ICreateCourseService
         // コース作成
         var course = Course.Create(
             courseCode,
-            command.Name,
-            command.Credits,
-            command.MaxCapacity);
+            request.Name,
+            request.Credits,
+            request.MaxCapacity);
 
         // 永続化
         await _courseRepository.AddAsync(course);

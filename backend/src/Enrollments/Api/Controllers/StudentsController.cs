@@ -3,6 +3,7 @@ using Enrollments.Application.Commands.UpdateStudent;
 using Enrollments.Application.Queries.GetStudents;
 using Enrollments.Application.Queries.Students;
 using Enrollments.Domain.Exceptions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Enrollments.Api.Controllers;
@@ -11,18 +12,11 @@ namespace Enrollments.Api.Controllers;
 [Route("api/[controller]")]
 public class StudentsController : ControllerBase
 {
-    private readonly ICreateStudentService _createStudentService;
-    private readonly IUpdateStudentService _updateStudentService;
-    private readonly IGetStudentsService _getStudentsService;
+    private readonly IMediator _mediator;
 
-    public StudentsController(
-        ICreateStudentService createStudentService,
-        IUpdateStudentService updateStudentService,
-        IGetStudentsService getStudentsService)
+    public StudentsController(IMediator mediator)
     {
-        _createStudentService = createStudentService;
-        _updateStudentService = updateStudentService;
-        _getStudentsService = getStudentsService;
+        _mediator = mediator;
     }
 
     /// <summary>
@@ -30,7 +24,11 @@ public class StudentsController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(List<StudentDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<StudentDto>>> GetStudents([FromQuery] int? grade, [FromQuery] string? name, [FromQuery] string? email)
+    public async Task<ActionResult<List<StudentDto>>> GetStudents(
+        [FromQuery] int? grade,
+        [FromQuery] string? name,
+        [FromQuery] string? email,
+        CancellationToken cancellationToken)
     {
         var query = new GetStudentsQuery
         {
@@ -39,7 +37,7 @@ public class StudentsController : ControllerBase
             Email = email
         };
 
-        var students = await _getStudentsService.GetStudentsAsync(query);
+        var students = await _mediator.Send(query, cancellationToken);
 
         return Ok(students);
     }
@@ -51,7 +49,9 @@ public class StudentsController : ControllerBase
     [ProducesResponseType(typeof(CreateStudentResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<CreateStudentResponse>> CreateStudent([FromBody] CreateStudentRequest request)
+    public async Task<ActionResult<CreateStudentResponse>> CreateStudent(
+        [FromBody] CreateStudentRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -62,7 +62,7 @@ public class StudentsController : ControllerBase
                 Grade = request.Grade
             };
 
-            var studentId = await _createStudentService.CreateStudentAsync(command);
+            var studentId = await _mediator.Send(command, cancellationToken);
 
             return CreatedAtAction(
                 nameof(GetStudent),
@@ -99,7 +99,10 @@ public class StudentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> UpdateStudent(Guid studentId, [FromBody] UpdateStudentRequest request)
+    public async Task<IActionResult> UpdateStudent(
+        Guid studentId,
+        [FromBody] UpdateStudentRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -111,7 +114,7 @@ public class StudentsController : ControllerBase
                 Grade = request.Grade
             };
 
-            await _updateStudentService.UpdateStudentAsync(command);
+            await _mediator.Send(command, cancellationToken);
 
             return NoContent();
         }

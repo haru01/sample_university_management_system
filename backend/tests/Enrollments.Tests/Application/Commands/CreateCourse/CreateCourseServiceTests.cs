@@ -8,14 +8,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Enrollments.Tests.Application.Commands;
 
 /// <summary>
-/// CreateCourseServiceのテスト
+/// CreateCourseCommandHandlerのテスト
 /// </summary>
-public class CreateCourseServiceTests : IDisposable
+public class CreateCourseCommandHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly CreateCourseService _service;
+    private readonly CreateCourseCommandHandler _handler;
 
-    public CreateCourseServiceTests()
+    public CreateCourseCommandHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
@@ -24,9 +24,9 @@ public class CreateCourseServiceTests : IDisposable
 
         _context = new CoursesDbContext(options);
 
-        // サービスの依存関係を初期化
+        // Handlerの依存関係を初期化
         var courseRepository = new CourseRepository(_context);
-        _service = new CreateCourseService(courseRepository);
+        _handler = new CreateCourseCommandHandler(courseRepository);
     }
 
     public void Dispose()
@@ -47,7 +47,7 @@ public class CreateCourseServiceTests : IDisposable
         };
 
         // Act
-        var courseId = await _service.CreateCourseAsync(command);
+        var courseId = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         Assert.NotNull(courseId);
@@ -81,7 +81,7 @@ public class CreateCourseServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<ConflictException>(
-            async () => await _service.CreateCourseAsync(command));
+            async () => await _handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class CreateCourseServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.CreateCourseAsync(command));
+            async () => await _handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class CreateCourseServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.CreateCourseAsync(command));
+            async () => await _handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class CreateCourseServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.CreateCourseAsync(command));
+            async () => await _handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class CreateCourseServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.CreateCourseAsync(command));
+            async () => await _handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class CreateCourseServiceTests : IDisposable
         };
 
         // Act
-        var courseId = await _service.CreateCourseAsync(command);
+        var courseId = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         Assert.Equal("CS106", courseId); // 大文字に正規化される

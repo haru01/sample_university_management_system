@@ -1,5 +1,4 @@
 using Enrollments.Application.Queries.GetStudents;
-using Enrollments.Domain.StudentAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
@@ -8,14 +7,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Enrollments.Tests.Application.Queries;
 
 /// <summary>
-/// GetStudentsServiceのテスト
+/// GetStudentsQueryHandlerのテスト
 /// </summary>
-public class GetStudentsServiceTests : IDisposable
+public class GetStudentsQueryHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly GetStudentsService _service;
+    private readonly GetStudentsQueryHandler _handler;
 
-    public GetStudentsServiceTests()
+    public GetStudentsQueryHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
@@ -24,9 +23,9 @@ public class GetStudentsServiceTests : IDisposable
 
         _context = new CoursesDbContext(options);
 
-        // サービスの依存関係を初期化
+        // ハンドラーの依存関係を初期化
         var studentRepository = new StudentRepository(_context);
-        _service = new GetStudentsService(studentRepository);
+        _handler = new GetStudentsQueryHandler(studentRepository);
     }
 
     public void Dispose()
@@ -56,7 +55,7 @@ public class GetStudentsServiceTests : IDisposable
         var query = new GetStudentsQuery(); // 条件なし
 
         // Act
-        var result = await _service.GetStudentsAsync(query);
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -90,7 +89,7 @@ public class GetStudentsServiceTests : IDisposable
         var query = new GetStudentsQuery { Grade = 2 };
 
         // Act
-        var result = await _service.GetStudentsAsync(query);
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -122,7 +121,7 @@ public class GetStudentsServiceTests : IDisposable
         var query = new GetStudentsQuery { Name = "山田" };
 
         // Act
-        var result = await _service.GetStudentsAsync(query);
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -155,7 +154,7 @@ public class GetStudentsServiceTests : IDisposable
         var query = new GetStudentsQuery { Email = "example.com" };
 
         // Act
-        var result = await _service.GetStudentsAsync(query);
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -190,7 +189,7 @@ public class GetStudentsServiceTests : IDisposable
         var query = new GetStudentsQuery { Grade = 2, Name = "山田" };
 
         // Act
-        var result = await _service.GetStudentsAsync(query);
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -213,7 +212,7 @@ public class GetStudentsServiceTests : IDisposable
         var query = new GetStudentsQuery { Name = "存在しない名前" };
 
         // Act
-        var result = await _service.GetStudentsAsync(query);
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -227,7 +226,7 @@ public class GetStudentsServiceTests : IDisposable
         var query = new GetStudentsQuery();
 
         // Act
-        var result = await _service.GetStudentsAsync(query);
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);

@@ -7,14 +7,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Enrollments.Tests.Application.Queries;
 
 /// <summary>
-/// GetCoursesServiceのテスト
+/// GetCoursesQueryHandlerのテスト
 /// </summary>
-public class GetCoursesServiceTests : IDisposable
+public class GetCoursesQueryHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly GetCoursesService _service;
+    private readonly GetCoursesQueryHandler _handler;
 
-    public GetCoursesServiceTests()
+    public GetCoursesQueryHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
@@ -23,9 +23,9 @@ public class GetCoursesServiceTests : IDisposable
 
         _context = new CoursesDbContext(options);
 
-        // サービスの依存関係を初期化
+        // ハンドラーの依存関係を初期化
         var courseRepository = new CourseRepository(_context);
-        _service = new GetCoursesService(courseRepository);
+        _handler = new GetCoursesQueryHandler(courseRepository);
     }
 
     public void Dispose()
@@ -59,7 +59,8 @@ public class GetCoursesServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetCoursesAsync();
+        var query = new GetCoursesQuery();
+        var results = await _handler.Handle(query, default);
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -81,7 +82,8 @@ public class GetCoursesServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetCoursesAsync();
+        var query = new GetCoursesQuery();
+        var results = await _handler.Handle(query, default);
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -97,7 +99,8 @@ public class GetCoursesServiceTests : IDisposable
         // データを登録しない
 
         // Act
-        var results = await _service.GetCoursesAsync();
+        var query = new GetCoursesQuery();
+        var results = await _handler.Handle(query, default);
 
         // Assert
         Assert.Empty(results);
@@ -118,7 +121,8 @@ public class GetCoursesServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetCoursesAsync();
+        var query = new GetCoursesQuery();
+        var results = await _handler.Handle(query, default);
 
         // Assert
         Assert.Single(results);
@@ -151,7 +155,8 @@ public class GetCoursesServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetCoursesAsync();
+        var query = new GetCoursesQuery();
+        var results = await _handler.Handle(query, default);
 
         // Assert
         Assert.Equal(2, results.Count);

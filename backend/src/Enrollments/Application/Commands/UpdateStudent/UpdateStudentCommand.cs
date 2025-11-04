@@ -1,9 +1,11 @@
+using MediatR;
+
 namespace Enrollments.Application.Commands.UpdateStudent;
 
 /// <summary>
 /// 学生情報更新コマンド
 /// </summary>
-public record UpdateStudentCommand
+public record UpdateStudentCommand : IRequest
 {
     public required Guid StudentId { get; init; }
     public required string Name { get; init; }

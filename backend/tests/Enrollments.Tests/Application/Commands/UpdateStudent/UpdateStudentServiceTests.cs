@@ -8,14 +8,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Enrollments.Tests.Application.Commands;
 
 /// <summary>
-/// UpdateStudentServiceのテスト
+/// UpdateStudentCommandHandlerのテスト
 /// </summary>
-public class UpdateStudentServiceTests : IDisposable
+public class UpdateStudentCommandHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly UpdateStudentService _service;
+    private readonly UpdateStudentCommandHandler _handler;
 
-    public UpdateStudentServiceTests()
+    public UpdateStudentCommandHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
@@ -24,9 +24,9 @@ public class UpdateStudentServiceTests : IDisposable
 
         _context = new CoursesDbContext(options);
 
-        // サービスの依存関係を初期化
+        // ハンドラーの依存関係を初期化
         var studentRepository = new StudentRepository(_context);
-        _service = new UpdateStudentService(studentRepository);
+        _handler = new UpdateStudentCommandHandler(studentRepository);
     }
 
     public void Dispose()
@@ -56,7 +56,7 @@ public class UpdateStudentServiceTests : IDisposable
         };
 
         // Act
-        await _service.UpdateStudentAsync(command);
+        await _handler.Handle(command, default);
 
         // Assert
         var updatedStudent = await _context.Students
@@ -82,7 +82,7 @@ public class UpdateStudentServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            async () => await _service.UpdateStudentAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.Contains("Student not found", exception.Message);
     }
 
@@ -111,7 +111,7 @@ public class UpdateStudentServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ConflictException>(
-            async () => await _service.UpdateStudentAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.Contains("Email already exists", exception.Message);
     }
 
@@ -137,7 +137,7 @@ public class UpdateStudentServiceTests : IDisposable
         };
 
         // Act
-        await _service.UpdateStudentAsync(command);
+        await _handler.Handle(command, default);
 
         // Assert
         var updatedStudent = await _context.Students
@@ -169,7 +169,7 @@ public class UpdateStudentServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.UpdateStudentAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.Contains("Invalid email format", exception.Message);
     }
 
@@ -194,7 +194,7 @@ public class UpdateStudentServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.UpdateStudentAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.Contains("Grade must be between 1 and 4", exception.Message);
     }
 
@@ -219,7 +219,7 @@ public class UpdateStudentServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.UpdateStudentAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.Contains("Student name cannot be empty", exception.Message);
     }
 }

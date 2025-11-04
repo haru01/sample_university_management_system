@@ -1,10 +1,5 @@
+using System.Reflection;
 using Enrollments.Api.Middleware;
-using Enrollments.Application.Commands.CreateCourse;
-using Enrollments.Application.Commands.CreateStudent;
-using Enrollments.Application.Commands.UpdateStudent;
-using Enrollments.Application.Queries.GetCourseByCode;
-using Enrollments.Application.Queries.GetCourses;
-using Enrollments.Application.Queries.GetStudents;
 using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.StudentAggregate;
 using Enrollments.Infrastructure.Persistence;
@@ -45,13 +40,11 @@ builder.Services.AddDbContext<CoursesDbContext>(options =>
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 
-// Application Services
-builder.Services.AddScoped<ICreateCourseService, CreateCourseService>();
-builder.Services.AddScoped<IGetCoursesService, GetCoursesService>();
-builder.Services.AddScoped<IGetCourseByCodeService, GetCourseByCodeService>();
-builder.Services.AddScoped<ICreateStudentService, CreateStudentService>();
-builder.Services.AddScoped<IUpdateStudentService, UpdateStudentService>();
-builder.Services.AddScoped<IGetStudentsService, GetStudentsService>();
+// MediatR - CommandHandlers/QueryHandlersを自動登録
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(Assembly.Load("Enrollments.Application"));
+});
 
 var app = builder.Build();
 

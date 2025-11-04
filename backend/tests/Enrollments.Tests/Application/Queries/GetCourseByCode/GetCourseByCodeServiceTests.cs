@@ -8,14 +8,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Enrollments.Tests.Application.Queries;
 
 /// <summary>
-/// GetCourseByCodeServiceのテスト
+/// GetCourseByCodeQueryHandlerのテスト
 /// </summary>
-public class GetCourseByCodeServiceTests : IDisposable
+public class GetCourseByCodeQueryHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly GetCourseByCodeService _service;
+    private readonly GetCourseByCodeQueryHandler _handler;
 
-    public GetCourseByCodeServiceTests()
+    public GetCourseByCodeQueryHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
@@ -24,9 +24,9 @@ public class GetCourseByCodeServiceTests : IDisposable
 
         _context = new CoursesDbContext(options);
 
-        // サービスの依存関係を初期化
+        // ハンドラーの依存関係を初期化
         var courseRepository = new CourseRepository(_context);
-        _service = new GetCourseByCodeService(courseRepository);
+        _handler = new GetCourseByCodeQueryHandler(courseRepository);
     }
 
     public void Dispose()
@@ -49,7 +49,8 @@ public class GetCourseByCodeServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetCourseByCodeAsync("CS101");
+        var query = new GetCourseByCodeQuery { CourseCode = "CS101" };
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -66,7 +67,8 @@ public class GetCourseByCodeServiceTests : IDisposable
         // データを登録しない
 
         // Act
-        var result = await _service.GetCourseByCodeAsync("CS999");
+        var query = new GetCourseByCodeQuery { CourseCode = "CS999" };
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.Null(result);
@@ -84,7 +86,8 @@ public class GetCourseByCodeServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetCourseByCodeAsync("cs101"); // 小文字で検索
+        var query = new GetCourseByCodeQuery { CourseCode = "cs101" };
+        var result = await _handler.Handle(query, default); // 小文字で検索
 
         // Assert
         Assert.NotNull(result);
@@ -98,8 +101,9 @@ public class GetCourseByCodeServiceTests : IDisposable
         // データを登録しない
 
         // Act & Assert
+        var query = new GetCourseByCodeQuery { CourseCode = "INVALID" };
         await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.GetCourseByCodeAsync("INVALID"));
+            async () => await _handler.Handle(query, default));
     }
 
     [Fact]
@@ -125,7 +129,8 @@ public class GetCourseByCodeServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetCourseByCodeAsync("MATH201");
+        var query = new GetCourseByCodeQuery { CourseCode = "MATH201" };
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -148,7 +153,8 @@ public class GetCourseByCodeServiceTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetCourseByCodeAsync("CS101");
+        var query = new GetCourseByCodeQuery { CourseCode = "CS101" };
+        var result = await _handler.Handle(query, default);
 
         // Assert
         Assert.NotNull(result);
@@ -165,7 +171,8 @@ public class GetCourseByCodeServiceTests : IDisposable
         // データを登録しない
 
         // Act & Assert
+        var query = new GetCourseByCodeQuery { CourseCode = "" };
         await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.GetCourseByCodeAsync(""));
+            async () => await _handler.Handle(query, default));
     }
 }

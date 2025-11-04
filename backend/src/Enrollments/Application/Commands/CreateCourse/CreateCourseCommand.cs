@@ -1,6 +1,8 @@
+using MediatR;
+
 namespace Enrollments.Application.Commands.CreateCourse;
 
-public record CreateCourseCommand
+public record CreateCourseCommand : IRequest<string>
 {
     public required string CourseCode { get; init; }
     public required string Name { get; init; }

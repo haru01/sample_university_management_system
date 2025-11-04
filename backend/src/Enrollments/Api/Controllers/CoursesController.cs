@@ -1,6 +1,7 @@
 using Enrollments.Application.Commands.CreateCourse;
 using Enrollments.Application.Queries.GetCourseByCode;
 using Enrollments.Application.Queries.GetCourses;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Enrollments.Api.Controllers;
@@ -9,18 +10,11 @@ namespace Enrollments.Api.Controllers;
 [Route("api/[controller]")]
 public class CoursesController : ControllerBase
 {
-    private readonly ICreateCourseService _createCourseService;
-    private readonly IGetCoursesService _getCoursesService;
-    private readonly IGetCourseByCodeService _getCourseByCodeService;
+    private readonly IMediator _mediator;
 
-    public CoursesController(
-        ICreateCourseService createCourseService,
-        IGetCoursesService getCoursesService,
-        IGetCourseByCodeService getCourseByCodeService)
+    public CoursesController(IMediator mediator)
     {
-        _createCourseService = createCourseService;
-        _getCoursesService = getCoursesService;
-        _getCourseByCodeService = getCourseByCodeService;
+        _mediator = mediator;
     }
 
     /// <summary>
@@ -28,9 +22,10 @@ public class CoursesController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(List<CourseDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<CourseDto>>> GetCourses()
+    public async Task<ActionResult<List<CourseDto>>> GetCourses(CancellationToken cancellationToken)
     {
-        var result = await _getCoursesService.GetCoursesAsync();
+        var query = new GetCoursesQuery();
+        var result = await _mediator.Send(query, cancellationToken);
         return Ok(result);
     }
 
@@ -40,9 +35,10 @@ public class CoursesController : ControllerBase
     [HttpGet("{code}")]
     [ProducesResponseType(typeof(CourseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<CourseDto>> GetCourseByCode(string code)
+    public async Task<ActionResult<CourseDto>> GetCourseByCode(string code, CancellationToken cancellationToken)
     {
-        var result = await _getCourseByCodeService.GetCourseByCodeAsync(code);
+        var query = new GetCourseByCodeQuery { CourseCode = code };
+        var result = await _mediator.Send(query, cancellationToken);
 
         if (result == null)
             return NotFound(new { message = $"Course with code '{code}' not found" });
@@ -56,7 +52,9 @@ public class CoursesController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(CreateCourseResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<CreateCourseResponse>> CreateCourse([FromBody] CreateCourseRequest request)
+    public async Task<ActionResult<CreateCourseResponse>> CreateCourse(
+        [FromBody] CreateCourseRequest request,
+        CancellationToken cancellationToken)
     {
         var command = new CreateCourseCommand
         {
@@ -66,7 +64,7 @@ public class CoursesController : ControllerBase
             MaxCapacity = request.MaxCapacity
         };
 
-        var courseCode = await _createCourseService.CreateCourseAsync(command);
+        var courseCode = await _mediator.Send(command, cancellationToken);
 
         return CreatedAtAction(
             nameof(GetCourseByCode),

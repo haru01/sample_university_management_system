@@ -1,20 +1,21 @@
 using Enrollments.Domain.CourseAggregate;
+using MediatR;
 
 namespace Enrollments.Application.Queries.GetCourses;
 
 /// <summary>
-/// コース一覧取得サービス実装
+/// コース一覧取得クエリハンドラー
 /// </summary>
-public class GetCoursesService : IGetCoursesService
+public class GetCoursesQueryHandler : IRequestHandler<GetCoursesQuery, List<CourseDto>>
 {
     private readonly ICourseRepository _courseRepository;
 
-    public GetCoursesService(ICourseRepository courseRepository)
+    public GetCoursesQueryHandler(ICourseRepository courseRepository)
     {
         _courseRepository = courseRepository;
     }
 
-    public async Task<List<CourseDto>> GetCoursesAsync()
+    public async Task<List<CourseDto>> Handle(GetCoursesQuery request, CancellationToken cancellationToken)
     {
         var courses = await _courseRepository.GetAllAsync();
 

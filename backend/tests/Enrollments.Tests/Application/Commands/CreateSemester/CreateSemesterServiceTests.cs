@@ -8,14 +8,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Enrollments.Tests.Application.Commands.CreateSemester;
 
 /// <summary>
-/// CreateSemesterServiceのテスト
+/// CreateSemesterCommandHandlerのテスト
 /// </summary>
-public class CreateSemesterServiceTests : IDisposable
+public class CreateSemesterCommandHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly CreateSemesterService _service;
+    private readonly CreateSemesterCommandHandler _handler;
 
-    public CreateSemesterServiceTests()
+    public CreateSemesterCommandHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
@@ -24,9 +24,9 @@ public class CreateSemesterServiceTests : IDisposable
 
         _context = new CoursesDbContext(options);
 
-        // サービスの依存関係を初期化
+        // ハンドラーの依存関係を初期化
         var semesterRepository = new SemesterRepository(_context);
-        _service = new CreateSemesterService(semesterRepository);
+        _handler = new CreateSemesterCommandHandler(semesterRepository);
     }
 
     public void Dispose()
@@ -47,7 +47,7 @@ public class CreateSemesterServiceTests : IDisposable
         };
 
         // Act
-        var semesterId = await _service.CreateSemesterAsync(command);
+        var semesterId = await _handler.Handle(command, default);
 
         // Assert
         Assert.NotNull(semesterId);
@@ -82,7 +82,7 @@ public class CreateSemesterServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ConflictException>(
-            async () => await _service.CreateSemesterAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.Contains("Semester already exists", exception.Message);
     }
 
@@ -100,7 +100,7 @@ public class CreateSemesterServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await _service.CreateSemesterAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.Contains("Invalid semester period. Must be Spring or Fall", exception.Message);
     }
 
@@ -118,7 +118,7 @@ public class CreateSemesterServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            async () => await _service.CreateSemesterAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.Contains("End date must be after start date", exception.Message);
     }
 
@@ -143,8 +143,8 @@ public class CreateSemesterServiceTests : IDisposable
         };
 
         // Act
-        var semesterId1 = await _service.CreateSemesterAsync(command1);
-        var semesterId2 = await _service.CreateSemesterAsync(command2);
+        var semesterId1 = await _handler.Handle(command1, default);
+        var semesterId2 = await _handler.Handle(command2, default);
 
         // Assert
         Assert.NotEqual(semesterId1, semesterId2);
@@ -168,7 +168,7 @@ public class CreateSemesterServiceTests : IDisposable
         };
 
         // Act
-        var semesterId = await _service.CreateSemesterAsync(command);
+        var semesterId = await _handler.Handle(command, default);
 
         // Assert
         Assert.Equal(validPeriod, semesterId.Period);
@@ -194,7 +194,7 @@ public class CreateSemesterServiceTests : IDisposable
         };
 
         // Act
-        var semesterId = await _service.CreateSemesterAsync(command);
+        var semesterId = await _handler.Handle(command, default);
 
         // Assert
         Assert.Equal(validYear, semesterId.Year);
@@ -220,7 +220,7 @@ public class CreateSemesterServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAnyAsync<Exception>(
-            async () => await _service.CreateSemesterAsync(command));
+            async () => await _handler.Handle(command, default));
         Assert.True(
             exception is ValidationException || exception is ArgumentException,
             $"Expected ValidationException or ArgumentException but got {exception.GetType().Name}");

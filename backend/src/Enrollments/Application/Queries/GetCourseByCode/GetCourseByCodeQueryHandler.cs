@@ -1,23 +1,24 @@
 using Enrollments.Application.Queries.GetCourses;
 using Enrollments.Domain.CourseAggregate;
+using MediatR;
 
 namespace Enrollments.Application.Queries.GetCourseByCode;
 
 /// <summary>
-/// コード指定コース取得サービス実装
+/// コード指定コース取得クエリハンドラー
 /// </summary>
-public class GetCourseByCodeService : IGetCourseByCodeService
+public class GetCourseByCodeQueryHandler : IRequestHandler<GetCourseByCodeQuery, CourseDto?>
 {
     private readonly ICourseRepository _courseRepository;
 
-    public GetCourseByCodeService(ICourseRepository courseRepository)
+    public GetCourseByCodeQueryHandler(ICourseRepository courseRepository)
     {
         _courseRepository = courseRepository;
     }
 
-    public async Task<CourseDto?> GetCourseByCodeAsync(string courseCode)
+    public async Task<CourseDto?> Handle(GetCourseByCodeQuery request, CancellationToken cancellationToken)
     {
-        var code = new CourseCode(courseCode);
+        var code = new CourseCode(request.CourseCode);
         var course = await _courseRepository.GetByCodeAsync(code);
 
         if (course == null)
