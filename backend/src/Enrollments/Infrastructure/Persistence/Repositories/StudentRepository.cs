@@ -31,26 +31,26 @@ public class StudentRepository : IStudentRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<Student>> GetFilteredAsync(GetStudentsQuery query, CancellationToken cancellationToken = default)
+    public async Task<List<Student>> GetFilteredAsync(StudentSearchCriteria criteria, CancellationToken cancellationToken = default)
     {
         var sqlQuery = _context.Students
             .AsNoTracking()
             .AsQueryable();
 
         // SQLレベルでフィルタリング
-        if (query.Grade.HasValue)
+        if (criteria.Grade.HasValue)
         {
-            sqlQuery = sqlQuery.Where(s => s.Grade == query.Grade);
+            sqlQuery = sqlQuery.Where(s => s.Grade == criteria.Grade);
         }
 
-        if (!string.IsNullOrWhiteSpace(query.Name))
+        if (!string.IsNullOrWhiteSpace(criteria.Name))
         {
-            sqlQuery = sqlQuery.Where(s => s.Name.Contains(query.Name));
+            sqlQuery = sqlQuery.Where(s => s.Name.Contains(criteria.Name));
         }
 
-        if (!string.IsNullOrWhiteSpace(query.Email))
+        if (!string.IsNullOrWhiteSpace(criteria.Email))
         {
-            sqlQuery = sqlQuery.Where(s => s.Email.Contains(query.Email));
+            sqlQuery = sqlQuery.Where(s => s.Email.Contains(criteria.Email));
         }
 
         // 登録日時の昇順（IDでソート）

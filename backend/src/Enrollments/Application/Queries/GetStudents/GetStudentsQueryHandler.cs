@@ -18,8 +18,8 @@ public class GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<St
 
     public async Task<List<StudentDto>> Handle(GetStudentsQuery request, CancellationToken cancellationToken)
     {
-        // Application QueryをDomain Queryに変換
-        var domainQuery = new Domain.StudentAggregate.GetStudentsQuery
+        // Application Queryを検索条件に変換
+        var searchCriteria = new StudentSearchCriteria
         {
             Name = request.Name,
             Email = request.Email,
@@ -27,7 +27,7 @@ public class GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<St
         };
 
         // SQLレベルでフィルタリング・ソート
-        var students = await _studentRepository.GetFilteredAsync(domainQuery, cancellationToken);
+        var students = await _studentRepository.GetFilteredAsync(searchCriteria, cancellationToken);
 
         // DTO に変換
         return students

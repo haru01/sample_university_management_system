@@ -23,10 +23,10 @@ public interface IStudentRepository
     /// <summary>
     /// 条件付きで学生を取得
     /// </summary>
-    /// <param name="query">検索クエリ（Grade、Name、Email はすべてオプション）</param>
+    /// <param name="criteria">検索条件（Grade、Name、Email はすべてオプション）</param>
     /// <param name="cancellationToken">キャンセルトークン</param>
     /// <returns>フィルタリング済み学生一覧（登録日時昇順）</returns>
-    Task<List<Student>> GetFilteredAsync(GetStudentsQuery query, CancellationToken cancellationToken = default);
+    Task<List<Student>> GetFilteredAsync(StudentSearchCriteria criteria, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 学生を追加
