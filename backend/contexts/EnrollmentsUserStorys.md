@@ -11,15 +11,7 @@
 
 ## CommandHandler/QueryHandler一覧
 
-### コースマスタ管理 (Phase 1 - 完了)
-
-| Handler | Command/Query | 説明 | 実装状態 |
-|---------|--------------|------|----------|
-| CreateCourseCommandHandler | CreateCourseCommand | コースマスタを登録 | ✅ 完了 |
-| GetCoursesQueryHandler | GetCoursesQuery | コースマスタ一覧を取得 | ✅ 完了 |
-| GetCourseByCodeQueryHandler | GetCourseByCodeQuery | コースマスタを取得 | ✅ 完了 |
-
-### 学生管理 (Phase 2 - 完了)
+### 学生管理 (Phase 1 - 完了) → エピック1
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
@@ -28,7 +20,7 @@
 | GetStudentQueryHandler | GetStudentQuery | 学生を取得 | ✅ 完了 |
 | UpdateStudentCommandHandler | UpdateStudentCommand | 学生情報を更新 | ✅ 完了 |
 
-### 学期管理 (Phase 3 - 完了)
+### 学期管理 (Phase 2 - 完了) → エピック2
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
@@ -36,7 +28,15 @@
 | GetSemestersQueryHandler | GetSemestersQuery | 学期一覧を取得 | ✅ 完了 |
 | GetCurrentSemesterQueryHandler | GetCurrentSemesterQuery | 現在の学期を取得 | ✅ 完了 |
 
-### コース開講管理 (Phase 3.5 - 未実装)
+### コースマスタ管理 (Phase 3 - 完了) → エピック3
+
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| CreateCourseCommandHandler | CreateCourseCommand | コースマスタを登録 | ✅ 完了 |
+| GetCoursesQueryHandler | GetCoursesQuery | コースマスタ一覧を取得 | ✅ 完了 |
+| GetCourseByCodeQueryHandler | GetCourseByCodeQuery | コースマスタを取得 | ✅ 完了 |
+
+### コース開講管理 (Phase 4 - 未実装) → エピック4
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
@@ -47,7 +47,7 @@
 | CancelCourseOfferingCommandHandler | CancelCourseOfferingCommand | コース開講をキャンセル | ⬜ 未実装 |
 | CopyCourseOfferingsFromPreviousSemesterCommandHandler | CopyCourseOfferingsFromPreviousSemesterCommand | 前学期のコース開講情報を一括コピー | ⬜ 未実装 |
 
-### 履修登録 (Phase 4 - 未実装)
+### 履修登録 (Phase 5 - 未実装) → エピック5
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
@@ -58,7 +58,405 @@
 
 ---
 
-## エピック1: コースマスタ管理
+## エピック1: 学生管理
+
+### ✅ US-S01: 学生を登録できる
+
+**ストーリー:**
+API利用者として、新しい学生をシステムに登録できるようにしたい。なぜなら、学生が履修登録するためにはアカウントが必要だから。
+
+**Handler:** `CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 有効な学生情報で新しい学生を登録する
+  Given データベースが利用可能である
+  When CreateStudentCommandを実行する
+    - Name: "山田太郎"
+    - Email: "yamada@example.com"
+    - Grade: 1
+  Then 自動生成された学生ID（Guid）が返される
+  And データベースに学生が保存されている
+  And 学生名が "山田太郎" である
+  And メールアドレスが "yamada@example.com" である
+```
+
+```gherkin
+Scenario: 重複するメールアドレスで登録を試みる
+  Given メールアドレス "existing@example.com" の学生が既にデータベースに登録されている
+  When CreateStudentCommandを実行する
+    - Name: "田中次郎"
+    - Email: "existing@example.com"
+    - Grade: 2
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Email already exists" が含まれる
+```
+
+```gherkin
+Scenario: 不正なメール形式で登録を試みる
+  Given データベースが利用可能である
+  When CreateStudentCommandを実行する
+    - Name: "山田太郎"
+    - Email: "invalid-email"
+    - Grade: 1
+  Then ArgumentException がスローされる
+  And エラーメッセージに "Invalid email format" が含まれる
+```
+
+**制約:**
+
+- 学生ID: UUID形式で自動生成
+- 名前: 必須、空白不可
+- メールアドレス: 必須、一意制約、メール形式
+- 学年: 1〜4の範囲
+
+**実装状態:** ✅ 完了
+
+---
+
+### ⬜ US-S02: 学生情報を更新できる
+
+**ストーリー:**
+API利用者として、学生情報を更新できるようにしたい。なぜなら、メールアドレスや学年情報が変更になることがあるから。
+
+**Handler:** `UpdateStudentCommandHandler : IRequestHandler<UpdateStudentCommand, Unit>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生情報を更新する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  When UpdateStudentCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - Name: "山田太郎"
+    - Email: "new@example.com"
+    - Grade: 2
+  Then 正常に完了する（戻り値なし）
+  And データベースの学生情報が更新されている
+  And メールアドレスが "new@example.com" に変更されている
+  And 学年が 2 に変更されている
+```
+
+```gherkin
+Scenario: 存在しない学生IDで更新を試みる
+  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
+  When UpdateStudentCommandを実行する
+    - StudentId: "99999999-9999-9999-9999-999999999999"
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "Student not found" が含まれる
+```
+
+**制約:**
+
+- 学生は自分の情報のみ更新可能
+- メールアドレスの一意制約は維持される
+
+**実装状態:** ✅ 完了
+
+---
+
+### ✅ US-S03: 学生一覧を取得できる
+
+**ストーリー:**
+API利用者として、登録されている学生の一覧を取得できるようにしたい。なぜなら、学生管理画面で全学生を確認したり、特定の条件で学生を検索する必要があるから。
+
+**Handler:** `GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<StudentDto>>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 全学生を取得する
+  Given データベースに以下の学生が登録されている
+    | 学生ID | 名前 | メールアドレス | 学年 |
+    | id-001 | 山田太郎 | yamada@example.com | 1 |
+    | id-002 | 鈴木花子 | suzuki@example.com | 2 |
+    | id-003 | 田中次郎 | tanaka@example.com | 3 |
+  When GetStudentsQueryを実行する
+    - フィルタ条件: なし
+  Then 3件のStudentDtoが返される
+  And 学生が登録日時の昇順でソートされている
+```
+
+```gherkin
+Scenario: 学年でフィルタリングして学生を取得する
+  Given データベースに学年1, 2, 3の学生が混在して登録されている
+  When GetStudentsQueryを実行する
+    - Grade: 2
+  Then 学年が 2 の学生のみが返される
+  And 複数該当する場合は登録日時の昇順でソートされている
+```
+
+```gherkin
+Scenario: 名前で部分一致検索して学生を取得する
+  Given データベースに以下の学生が登録されている
+    | 名前 |
+    | 山田太郎 |
+    | 山田花子 |
+    | 田中次郎 |
+  When GetStudentsQueryを実行する
+    - Name: "山田"
+  Then "山田太郎" と "山田花子" のみが返される
+  And 大文字小文字を区別しない
+```
+
+```gherkin
+Scenario: メールアドレスで検索して学生を取得する
+  Given データベースに以下の学生が登録されている
+    | メールアドレス |
+    | yamada@example.com |
+    | suzuki@example.com |
+    | suzuki@hoge.com |
+  When GetStudentsQueryを実行する
+    - Email: "example.com"
+  Then 部分一致する学生が全て返される
+```
+
+```gherkin
+Scenario: 複数の条件を組み合わせて検索する
+  Given データベースに複数の学生が登録されている
+  When GetStudentsQueryを実行する
+    - Grade: 2
+    - Name: "山田"
+  Then 学年が 2 且つ名前に "山田" が含まれる学生のみが返される
+```
+
+```gherkin
+Scenario: 検索結果が0件の場合
+  Given データベースに学生が登録されている
+  When GetStudentsQueryを実行する
+    - Name: "存在しない名前"
+  Then 空のリスト（0件）が返される
+```
+
+```gherkin
+Scenario: 学生が1件も登録されていない場合
+  Given データベースに学生が登録されていない
+  When GetStudentsQueryを実行する
+    - フィルタ条件: なし
+  Then 空のリスト（0件）が返される
+```
+
+**制約:**
+
+- フィルタ条件はオプション（全て指定なしで全件取得可能）
+- デフォルトソート: 登録日時の昇順
+- 名前とメールアドレスは部分一致
+- ページネーション未実装
+
+**実装状態:** ✅ 完了
+
+---
+
+### ✅ US-S04: 学生を取得できる
+
+**ストーリー:**
+API利用者として、学生IDを指定して特定の学生情報を取得できるようにしたい。なぜなら、学生の詳細情報を表示したり、編集フォームに学生情報をロードする必要があるから。
+
+**Handler:** `GetStudentQueryHandler : IRequestHandler<GetStudentQuery, StudentDto>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 存在する学生IDで学生を取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - Name: "山田太郎"
+    - Email: "yamada@example.com"
+    - Grade: 2
+  When GetStudentQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then StudentDtoが返される
+  And 学生IDが "123e4567-e89b-12d3-a456-426614174000" である
+  And 学生名が "山田太郎" である
+  And メールアドレスが "yamada@example.com" である
+  And 学年が 2 である
+```
+
+```gherkin
+Scenario: 存在しない学生IDで取得を試みる
+  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
+  When GetStudentQueryを実行する
+    - StudentId: "99999999-9999-9999-9999-999999999999"
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "not found" が含まれる
+```
+
+**制約:**
+
+- 学生IDはGUID形式
+- 存在しない学生の場合はKeyNotFoundException
+
+**実装状態:** ✅ 完了
+
+
+---
+
+## エピック2: 学期管理
+
+### ⬜ US-M01: 学期情報を管理できる
+
+**ストーリー:**
+管理者として、学期情報（年度、学期、期間）を管理できるようにしたい。なぜなら、履修登録は学期ごとに管理される必要があるから。
+
+**Handler:** `CreateSemesterCommandHandler : IRequestHandler<CreateSemesterCommand, SemesterId>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 新しい学期を登録する
+  Given SemesterRepositoryが利用可能である
+  When CreateSemesterCommandを実行する
+    - Year: 2024
+    - Period: Spring
+    - StartDate: 2024-04-01
+    - EndDate: 2024-09-30
+    - EnrollmentDeadline: 2024-04-15
+    - CancellationDeadline: 2024-05-31
+  Then Semesterエンティティが作成される
+  And SemesterRepositoryに保存される
+  And SemesterId (2024, Spring) が返される
+```
+
+```gherkin
+Scenario: 重複する学期を登録しようとする
+  Given SemesterRepositoryに (2024, Spring) の学期が既に存在する
+  When 同じYear, PeriodでCreateSemesterCommandを実行する
+  Then DomainException "Semester already exists" がスローされる
+  And SemesterRepositoryに保存されない
+```
+
+```gherkin
+Scenario: 不正な学期期間で登録を試みる
+  Given SemesterRepositoryが利用可能である
+  When CreateSemesterCommandを実行する
+    - Year: 2024
+    - Period: "InvalidPeriod"
+  Then ArgumentException "Invalid semester period. Must be Spring or Fall" がスローされる
+```
+
+```gherkin
+Scenario: 終了日が開始日より前の学期を登録しようとする
+  Given SemesterRepositoryが利用可能である
+  When CreateSemesterCommandを実行する
+    - StartDate: 2024-09-30
+    - EndDate: 2024-04-01
+  Then DomainException "End date must be after start date" がスローされる
+  And SemesterRepositoryに保存されない
+```
+
+```gherkin
+Scenario: 期限の順序が不正な学期を登録しようとする
+  Given SemesterRepositoryが利用可能である
+  When CreateSemesterCommandを実行する
+    - Year: 2024
+    - Period: Spring
+    - StartDate: 2024-04-01
+    - EndDate: 2024-09-30
+    - EnrollmentDeadline: 2024-06-01
+    - CancellationDeadline: 2024-05-31
+  Then DomainException "Deadlines must be: StartDate < EnrollmentDeadline < CancellationDeadline < EndDate" がスローされる
+  And SemesterRepositoryに保存されない
+```
+
+**制約:**
+
+- 学期: Spring または Fall
+- 年度: 2000〜2100の範囲
+- 同じ年度・学期の組み合わせは一意
+- 日付順序: StartDate < EnrollmentDeadline < CancellationDeadline < EndDate
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-M02: 学期一覧を取得できる
+
+**ストーリー:**
+学生・教員として、登録されている学期の一覧を取得できるようにしたい。なぜなら、履修登録時に選択可能な学期を表示する必要があるから。
+
+**Handler:** `GetSemestersQueryHandler : IRequestHandler<GetSemestersQuery, List<SemesterDto>>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 全学期を取得する
+  Given SemesterRepositoryに以下のSemesterが存在する
+    | Year | Period | StartDate  | EndDate    |
+    | 2024 | Spring | 2024-04-01 | 2024-09-30 |
+    | 2024 | Fall   | 2024-10-01 | 2025-03-31 |
+    | 2023 | Fall   | 2023-10-01 | 2024-03-31 |
+  When GetSemestersQueryを実行する
+  Then 3件のSemesterDtoが返される
+  And Yearの降順、Periodの降順でソートされている（最新が先頭）
+```
+
+```gherkin
+Scenario: 現在の学期のみを取得する
+  Given SemesterRepositoryに複数のSemesterが存在する
+  And 現在日時が 2024-05-15 である
+  When GetSemestersQueryを実行する
+    - CurrentOnly: true
+  Then 2024年SpringのSemesterDtoのみが返される
+  And StartDate <= 現在日時 <= EndDate を満たす
+```
+
+```gherkin
+Scenario: 学期が1件も登録されていない場合
+  Given SemesterRepositoryにSemesterが存在しない
+  When GetSemestersQueryを実行する
+  Then 空のリストが返される
+```
+
+**制約:**
+
+- デフォルトソート: 年度・学期の降順（最新が先頭）
+- `CurrentOnly`パラメータで現在の学期のみフィルタリング可能
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-M03: 現在の学期を取得できる
+
+**ストーリー:**
+学生・教員として、現在の学期情報を簡単に取得できるようにしたい。なぜなら、履修登録画面で現在の学期を表示する必要があるから。
+
+**Handler:** `GetCurrentSemesterQueryHandler : IRequestHandler<GetCurrentSemesterQuery, SemesterDto>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 現在の学期を取得する
+  Given SemesterRepositoryに以下のSemesterが存在する
+    | Year | Period | StartDate  | EndDate    |
+    | 2024 | Spring | 2024-04-01 | 2024-09-30 |
+    | 2024 | Fall   | 2024-10-01 | 2025-03-31 |
+  And 現在日時が 2024-05-15 である
+  When GetCurrentSemesterQueryを実行する
+  Then SemesterDtoが返される
+  And Yearが2024である
+  And PeriodがSpringである
+```
+
+```gherkin
+Scenario: 現在の学期が存在しない場合
+  Given SemesterRepositoryにSemesterが存在する
+  And 現在日時がどのSemesterの期間にも含まれない
+  When GetCurrentSemesterQueryを実行する
+  Then NotFoundException "No current semester found" がスローされる
+```
+
+**制約:**
+
+- 現在日時が開始日〜終了日の範囲内の学期を返す
+- 該当する学期が存在しない場合はNotFoundException
+
+**実装状態:** ⬜ 未実装
+
+---
+
+## エピック3: コースマスタ管理
 
 ### ✅ US-E01: コースマスタを登録できる
 
@@ -197,7 +595,7 @@ Scenario: 存在しないコースコードで取得を試みる
 
 ---
 
-## エピック1.5: コース開講管理
+## エピック4: コース開講管理
 
 ### US-CO01: コース開講を登録できる
 
@@ -610,404 +1008,7 @@ public class CopyCourseOfferingsResult
 
 ---
 
-## エピック2: 学生管理
-
-### ✅ US-S01: 学生を登録できる
-
-**ストーリー:**
-API利用者として、新しい学生をシステムに登録できるようにしたい。なぜなら、学生が履修登録するためにはアカウントが必要だから。
-
-**Handler:** `CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand, Guid>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 有効な学生情報で新しい学生を登録する
-  Given データベースが利用可能である
-  When CreateStudentCommandを実行する
-    - Name: "山田太郎"
-    - Email: "yamada@example.com"
-    - Grade: 1
-  Then 自動生成された学生ID（Guid）が返される
-  And データベースに学生が保存されている
-  And 学生名が "山田太郎" である
-  And メールアドレスが "yamada@example.com" である
-```
-
-```gherkin
-Scenario: 重複するメールアドレスで登録を試みる
-  Given メールアドレス "existing@example.com" の学生が既にデータベースに登録されている
-  When CreateStudentCommandを実行する
-    - Name: "田中次郎"
-    - Email: "existing@example.com"
-    - Grade: 2
-  Then InvalidOperationException がスローされる
-  And エラーメッセージに "Email already exists" が含まれる
-```
-
-```gherkin
-Scenario: 不正なメール形式で登録を試みる
-  Given データベースが利用可能である
-  When CreateStudentCommandを実行する
-    - Name: "山田太郎"
-    - Email: "invalid-email"
-    - Grade: 1
-  Then ArgumentException がスローされる
-  And エラーメッセージに "Invalid email format" が含まれる
-```
-
-**制約:**
-
-- 学生ID: UUID形式で自動生成
-- 名前: 必須、空白不可
-- メールアドレス: 必須、一意制約、メール形式
-- 学年: 1〜4の範囲
-
-**実装状態:** ✅ 完了
-
----
-
-### ⬜ US-S02: 学生情報を更新できる
-
-**ストーリー:**
-API利用者として、学生情報を更新できるようにしたい。なぜなら、メールアドレスや学年情報が変更になることがあるから。
-
-**Handler:** `UpdateStudentCommandHandler : IRequestHandler<UpdateStudentCommand, Unit>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 学生情報を更新する
-  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
-  When UpdateStudentCommandを実行する
-    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
-    - Name: "山田太郎"
-    - Email: "new@example.com"
-    - Grade: 2
-  Then 正常に完了する（戻り値なし）
-  And データベースの学生情報が更新されている
-  And メールアドレスが "new@example.com" に変更されている
-  And 学年が 2 に変更されている
-```
-
-```gherkin
-Scenario: 存在しない学生IDで更新を試みる
-  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
-  When UpdateStudentCommandを実行する
-    - StudentId: "99999999-9999-9999-9999-999999999999"
-  Then KeyNotFoundException がスローされる
-  And エラーメッセージに "Student not found" が含まれる
-```
-
-**制約:**
-
-- 学生は自分の情報のみ更新可能
-- メールアドレスの一意制約は維持される
-
-**実装状態:** ✅ 完了
-
----
-
-### ✅ US-S03: 学生一覧を取得できる
-
-**ストーリー:**
-API利用者として、登録されている学生の一覧を取得できるようにしたい。なぜなら、学生管理画面で全学生を確認したり、特定の条件で学生を検索する必要があるから。
-
-**Handler:** `GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<StudentDto>>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 全学生を取得する
-  Given データベースに以下の学生が登録されている
-    | 学生ID | 名前 | メールアドレス | 学年 |
-    | id-001 | 山田太郎 | yamada@example.com | 1 |
-    | id-002 | 鈴木花子 | suzuki@example.com | 2 |
-    | id-003 | 田中次郎 | tanaka@example.com | 3 |
-  When GetStudentsQueryを実行する
-    - フィルタ条件: なし
-  Then 3件のStudentDtoが返される
-  And 学生が登録日時の昇順でソートされている
-```
-
-```gherkin
-Scenario: 学年でフィルタリングして学生を取得する
-  Given データベースに学年1, 2, 3の学生が混在して登録されている
-  When GetStudentsQueryを実行する
-    - Grade: 2
-  Then 学年が 2 の学生のみが返される
-  And 複数該当する場合は登録日時の昇順でソートされている
-```
-
-```gherkin
-Scenario: 名前で部分一致検索して学生を取得する
-  Given データベースに以下の学生が登録されている
-    | 名前 |
-    | 山田太郎 |
-    | 山田花子 |
-    | 田中次郎 |
-  When GetStudentsQueryを実行する
-    - Name: "山田"
-  Then "山田太郎" と "山田花子" のみが返される
-  And 大文字小文字を区別しない
-```
-
-```gherkin
-Scenario: メールアドレスで検索して学生を取得する
-  Given データベースに以下の学生が登録されている
-    | メールアドレス |
-    | yamada@example.com |
-    | suzuki@example.com |
-    | suzuki@hoge.com |
-  When GetStudentsQueryを実行する
-    - Email: "example.com"
-  Then 部分一致する学生が全て返される
-```
-
-```gherkin
-Scenario: 複数の条件を組み合わせて検索する
-  Given データベースに複数の学生が登録されている
-  When GetStudentsQueryを実行する
-    - Grade: 2
-    - Name: "山田"
-  Then 学年が 2 且つ名前に "山田" が含まれる学生のみが返される
-```
-
-```gherkin
-Scenario: 検索結果が0件の場合
-  Given データベースに学生が登録されている
-  When GetStudentsQueryを実行する
-    - Name: "存在しない名前"
-  Then 空のリスト（0件）が返される
-```
-
-```gherkin
-Scenario: 学生が1件も登録されていない場合
-  Given データベースに学生が登録されていない
-  When GetStudentsQueryを実行する
-    - フィルタ条件: なし
-  Then 空のリスト（0件）が返される
-```
-
-**制約:**
-
-- フィルタ条件はオプション（全て指定なしで全件取得可能）
-- デフォルトソート: 登録日時の昇順
-- 名前とメールアドレスは部分一致
-- ページネーション未実装
-
-**実装状態:** ✅ 完了
-
----
-
-### ✅ US-S04: 学生を取得できる
-
-**ストーリー:**
-API利用者として、学生IDを指定して特定の学生情報を取得できるようにしたい。なぜなら、学生の詳細情報を表示したり、編集フォームに学生情報をロードする必要があるから。
-
-**Handler:** `GetStudentQueryHandler : IRequestHandler<GetStudentQuery, StudentDto>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 存在する学生IDで学生を取得する
-  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
-    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
-    - Name: "山田太郎"
-    - Email: "yamada@example.com"
-    - Grade: 2
-  When GetStudentQueryを実行する
-    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
-  Then StudentDtoが返される
-  And 学生IDが "123e4567-e89b-12d3-a456-426614174000" である
-  And 学生名が "山田太郎" である
-  And メールアドレスが "yamada@example.com" である
-  And 学年が 2 である
-```
-
-```gherkin
-Scenario: 存在しない学生IDで取得を試みる
-  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
-  When GetStudentQueryを実行する
-    - StudentId: "99999999-9999-9999-9999-999999999999"
-  Then KeyNotFoundException がスローされる
-  And エラーメッセージに "not found" が含まれる
-```
-
-**制約:**
-
-- 学生IDはGUID形式
-- 存在しない学生の場合はKeyNotFoundException
-
-**実装状態:** ✅ 完了
-
----
-
-## エピック3: 学期管理
-
-### ⬜ US-M01: 学期情報を管理できる
-
-**ストーリー:**
-管理者として、学期情報（年度、学期、期間）を管理できるようにしたい。なぜなら、履修登録は学期ごとに管理される必要があるから。
-
-**Handler:** `CreateSemesterCommandHandler : IRequestHandler<CreateSemesterCommand, SemesterId>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 新しい学期を登録する
-  Given SemesterRepositoryが利用可能である
-  When CreateSemesterCommandを実行する
-    - Year: 2024
-    - Period: Spring
-    - StartDate: 2024-04-01
-    - EndDate: 2024-09-30
-    - EnrollmentDeadline: 2024-04-15
-    - CancellationDeadline: 2024-05-31
-  Then Semesterエンティティが作成される
-  And SemesterRepositoryに保存される
-  And SemesterId (2024, Spring) が返される
-```
-
-```gherkin
-Scenario: 重複する学期を登録しようとする
-  Given SemesterRepositoryに (2024, Spring) の学期が既に存在する
-  When 同じYear, PeriodでCreateSemesterCommandを実行する
-  Then DomainException "Semester already exists" がスローされる
-  And SemesterRepositoryに保存されない
-```
-
-```gherkin
-Scenario: 不正な学期期間で登録を試みる
-  Given SemesterRepositoryが利用可能である
-  When CreateSemesterCommandを実行する
-    - Year: 2024
-    - Period: "InvalidPeriod"
-  Then ArgumentException "Invalid semester period. Must be Spring or Fall" がスローされる
-```
-
-```gherkin
-Scenario: 終了日が開始日より前の学期を登録しようとする
-  Given SemesterRepositoryが利用可能である
-  When CreateSemesterCommandを実行する
-    - StartDate: 2024-09-30
-    - EndDate: 2024-04-01
-  Then DomainException "End date must be after start date" がスローされる
-  And SemesterRepositoryに保存されない
-```
-
-```gherkin
-Scenario: 期限の順序が不正な学期を登録しようとする
-  Given SemesterRepositoryが利用可能である
-  When CreateSemesterCommandを実行する
-    - Year: 2024
-    - Period: Spring
-    - StartDate: 2024-04-01
-    - EndDate: 2024-09-30
-    - EnrollmentDeadline: 2024-06-01
-    - CancellationDeadline: 2024-05-31
-  Then DomainException "Deadlines must be: StartDate < EnrollmentDeadline < CancellationDeadline < EndDate" がスローされる
-  And SemesterRepositoryに保存されない
-```
-
-**制約:**
-
-- 学期: Spring または Fall
-- 年度: 2000〜2100の範囲
-- 同じ年度・学期の組み合わせは一意
-- 日付順序: StartDate < EnrollmentDeadline < CancellationDeadline < EndDate
-
-**実装状態:** ⬜ 未実装
-
----
-
-### ⬜ US-M02: 学期一覧を取得できる
-
-**ストーリー:**
-学生・教員として、登録されている学期の一覧を取得できるようにしたい。なぜなら、履修登録時に選択可能な学期を表示する必要があるから。
-
-**Handler:** `GetSemestersQueryHandler : IRequestHandler<GetSemestersQuery, List<SemesterDto>>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 全学期を取得する
-  Given SemesterRepositoryに以下のSemesterが存在する
-    | Year | Period | StartDate  | EndDate    |
-    | 2024 | Spring | 2024-04-01 | 2024-09-30 |
-    | 2024 | Fall   | 2024-10-01 | 2025-03-31 |
-    | 2023 | Fall   | 2023-10-01 | 2024-03-31 |
-  When GetSemestersQueryを実行する
-  Then 3件のSemesterDtoが返される
-  And Yearの降順、Periodの降順でソートされている（最新が先頭）
-```
-
-```gherkin
-Scenario: 現在の学期のみを取得する
-  Given SemesterRepositoryに複数のSemesterが存在する
-  And 現在日時が 2024-05-15 である
-  When GetSemestersQueryを実行する
-    - CurrentOnly: true
-  Then 2024年SpringのSemesterDtoのみが返される
-  And StartDate <= 現在日時 <= EndDate を満たす
-```
-
-```gherkin
-Scenario: 学期が1件も登録されていない場合
-  Given SemesterRepositoryにSemesterが存在しない
-  When GetSemestersQueryを実行する
-  Then 空のリストが返される
-```
-
-**制約:**
-
-- デフォルトソート: 年度・学期の降順（最新が先頭）
-- `CurrentOnly`パラメータで現在の学期のみフィルタリング可能
-
-**実装状態:** ⬜ 未実装
-
----
-
-### ⬜ US-M03: 現在の学期を取得できる
-
-**ストーリー:**
-学生・教員として、現在の学期情報を簡単に取得できるようにしたい。なぜなら、履修登録画面で現在の学期を表示する必要があるから。
-
-**Handler:** `GetCurrentSemesterQueryHandler : IRequestHandler<GetCurrentSemesterQuery, SemesterDto>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 現在の学期を取得する
-  Given SemesterRepositoryに以下のSemesterが存在する
-    | Year | Period | StartDate  | EndDate    |
-    | 2024 | Spring | 2024-04-01 | 2024-09-30 |
-    | 2024 | Fall   | 2024-10-01 | 2025-03-31 |
-  And 現在日時が 2024-05-15 である
-  When GetCurrentSemesterQueryを実行する
-  Then SemesterDtoが返される
-  And Yearが2024である
-  And PeriodがSpringである
-```
-
-```gherkin
-Scenario: 現在の学期が存在しない場合
-  Given SemesterRepositoryにSemesterが存在する
-  And 現在日時がどのSemesterの期間にも含まれない
-  When GetCurrentSemesterQueryを実行する
-  Then NotFoundException "No current semester found" がスローされる
-```
-
-**制約:**
-
-- 現在日時が開始日〜終了日の範囲内の学期を返す
-- 該当する学期が存在しない場合はNotFoundException
-
-**実装状態:** ⬜ 未実装
-
----
-
-## エピック4: 履修登録
+## エピック5: 履修登録
 
 ### ⬜ US-R01: コースを履修登録できる
 
@@ -1389,25 +1390,34 @@ Scenario: 存在しない履修登録IDで完了を試みる
 
 ## 実装優先順位
 
-### Phase 1: コースマスタ管理（完了済み）
+**注**: Phase番号は実装順序を示します。エピック番号とは異なります。
 
-- ✅ US-E01: コースマスタ登録
-- ✅ US-E02: コースマスタ一覧閲覧
-- ✅ US-E03: コースマスタ検索
-
-### Phase 2: 学生管理（完了）
+### Phase 1: 学生管理（完了済み） → エピック1
 
 - ✅ US-S01: 学生登録
 - ✅ US-S02: 学生情報更新
 - ✅ US-S03: 学生一覧取得（条件絞込可能）
+- ✅ US-S04: 学生取得
 
-### Phase 3: 学期管理（完了）
+**理由**: 最もシンプルで他機能への依存なし。学生IDの発行が全ての履修管理の前提。
+
+### Phase 2: 学期管理（完了済み） → エピック2
 
 - ✅ US-M01: 学期登録
 - ✅ US-M02: 学期一覧取得
 - ✅ US-M03: 現在の学期取得
 
-### Phase 3.5: コース開講管理（次フェーズ）
+**理由**: 学期の概念が確立されないとコース開講や履修登録ができない。学生管理の次に必要。
+
+### Phase 3: コースマスタ管理（完了済み） → エピック3
+
+- ✅ US-E01: コースマスタ登録
+- ✅ US-E02: コースマスタ一覧閲覧
+- ✅ US-E03: コースマスタ検索
+
+**理由**: コース開講の前提となるカタログ情報。学期と独立して登録可能。
+
+### Phase 4: コース開講管理（次フェーズ） → エピック3.5
 
 **優先順位1: コア開講管理機能**
 
@@ -1424,12 +1434,16 @@ Scenario: 存在しない履修登録IDで完了を試みる
 
 - ⬜ US-CO06: 前学期のコース開講情報を一括コピー
 
-### Phase 4: 履修登録コア機能
+**理由**: 学期・コースマスタに依存。開講情報が揃わないと履修登録不可。
+
+### Phase 5: 履修登録コア機能 → エピック4
 
 - ⬜ US-R01: 履修登録（学期依存）
 - ⬜ US-R02: 履修登録キャンセル
 - ⬜ US-R03: 履修登録一覧閲覧
 - ⬜ US-R04: 履修登録完了
+
+**理由**: 全機能に依存。最も複雑なビジネスルール（重複防止、期限チェック、単位上限）を含む。
 
 ---
 
