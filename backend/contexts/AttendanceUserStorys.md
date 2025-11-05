@@ -497,4 +497,4 @@ Grading (成績評価)
 
 ## テスト実装戦略
 
-詳細は [testing-strategy.md](impl-pattens/testing-strategy.md) を参照してください。
+詳細は [testing-strategy.md](impl-patterns/testing-strategy.md) を参照してください。

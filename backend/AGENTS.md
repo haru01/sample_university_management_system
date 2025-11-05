@@ -67,14 +67,14 @@ UniversityManagement/
 
 詳細なアーキテクチャ原則と設計パターンについては、以下のドキュメントを参照してください：
 
-### 📐 [アーキテクチャ原則](contexts/architecture-principles.md)
+### 📐 [アーキテクチャ原則](contexts/impl-patterns/architecture-principles.md)
 - 境界づけられたコンテキスト（Bounded Context）
 - レイヤーアーキテクチャと依存関係
 - 集約設計ルール
 - CQRS パターン
 - イベント駆動アーキテクチャ
 
-### 🏛️ [Domain層 実装パターン](contexts/domain-layer-patterns.md)
+### 🏛️ [Domain層 実装パターン](contexts/impl-patterns/domain-layer-patterns.md)
 - エンティティ / 集約ルート
 - 値オブジェクト（Value Objects）
 - リポジトリインターフェース
@@ -82,7 +82,7 @@ UniversityManagement/
 - ドメインイベント
 - ドメイン例外
 
-### ⚙️ [Application層 実装パターン](contexts/impl-pattens/application-layer-patterns.md)
+### ⚙️ [Application層 実装パターン](contexts/impl-patterns/application-layer-patterns.md)
 
 - Command/Query インターフェース（CQRS）
 - CommandHandler / QueryHandler（MediatR）
@@ -90,7 +90,7 @@ UniversityManagement/
 - トランザクション管理
 - 例外ハンドリング
 
-### 🧪 [テスト戦略](contexts/impl-pattens/testing-strategy.md)
+### 🧪 [テスト戦略](contexts/impl-patterns/testing-strategy.md)
 
 - テストピラミッド（Application層中心の統合テスト戦略）
 - インメモリDBを使ったテスト独立性の確保
@@ -99,7 +99,7 @@ UniversityManagement/
 - テストデータビルダーパターン
 - CI/CDでのテスト実行
 
-### 🗄️ [Infrastructure層 実装パターン](contexts/impl-pattens/infrastructure-layer-patterns.md)
+### 🗄️ [Infrastructure層 実装パターン](contexts/impl-patterns/infrastructure-layer-patterns.md)
 
 - DbContext（Unit of Work）
 - Entity Configuration（Fluent API）
@@ -175,7 +175,7 @@ public class GlobalExceptionMiddleware
 
 ### テスト方針
 
-詳細なテスト戦略については [テスト戦略ドキュメント](contexts/impl-pattens/testing-strategy.md) を参照してください。
+詳細なテスト戦略については [テスト戦略ドキュメント](contexts/impl-patterns/testing-strategy.md) を参照してください。
 
 - **Application層を手厚くテスト**: インメモリDBを使った統合テスト
 - **テスト独立性の保証**: 各テストごとに専用のDbContextを生成
@@ -359,7 +359,7 @@ dotnet test --logger "console;verbosity=normal"
 backend/
 ├── Agent.md                                   # このファイル（全体概要）
 └── contexts/
-    └── impl-pattens/                         # 詳細パターン集
+    └── impl-patterns/                         # 詳細パターン集
         ├── architecture-principles.md         # アーキテクチャ原則
         ├── domain-layer-patterns.md          # Domain層パターン
         ├── application-layer-patterns.md     # Application層パターン
