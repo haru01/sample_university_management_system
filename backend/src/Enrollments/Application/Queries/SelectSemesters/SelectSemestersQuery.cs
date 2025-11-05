@@ -1,11 +1,11 @@
 using Enrollments.Application.Queries.Semesters;
 using MediatR;
 
-namespace Enrollments.Application.Queries.GetSemesters;
+namespace Enrollments.Application.Queries.SelectSemesters;
 
 /// <summary>
 /// 学期一覧取得クエリ
 /// </summary>
-public record GetSemestersQuery : IRequest<List<SemesterDto>>
+public record SelectSemestersQuery : IRequest<List<SemesterDto>>
 {
 }

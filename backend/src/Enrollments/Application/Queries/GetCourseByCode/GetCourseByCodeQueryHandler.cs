@@ -1,4 +1,4 @@
-using Enrollments.Application.Queries.GetCourses;
+using Enrollments.Application.Queries.SelectCourses;
 using Enrollments.Domain.CourseAggregate;
 using MediatR;
 

@@ -1,7 +1,7 @@
 using Enrollments.Application.Commands.CreateStudent;
 using Enrollments.Application.Commands.UpdateStudent;
 using Enrollments.Application.Queries.GetStudent;
-using Enrollments.Application.Queries.GetStudents;
+using Enrollments.Application.Queries.SelectStudents;
 using Enrollments.Application.Queries.Students;
 using Enrollments.Domain.Exceptions;
 using MediatR;
@@ -31,7 +31,7 @@ public class StudentsController : ControllerBase
         [FromQuery] string? email,
         CancellationToken cancellationToken)
     {
-        var query = new GetStudentsQuery
+        var query = new SelectStudentsQuery
         {
             Grade = grade,
             Name = name,

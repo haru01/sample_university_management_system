@@ -1,4 +1,4 @@
-using Enrollments.Application.Queries.GetCourses;
+using Enrollments.Application.Queries.SelectCourses;
 using MediatR;
 
 namespace Enrollments.Application.Queries.GetCourseByCode;

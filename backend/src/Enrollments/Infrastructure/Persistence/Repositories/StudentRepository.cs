@@ -24,14 +24,14 @@ public class StudentRepository : IStudentRepository
             .FirstOrDefaultAsync(s => s.Email == email, cancellationToken);
     }
 
-    public async Task<List<Student>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<List<Student>> SelectAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Students
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<Student>> GetFilteredAsync(StudentSearchCriteria criteria, CancellationToken cancellationToken = default)
+    public async Task<List<Student>> SelectFilteredAsync(StudentSearchCriteria criteria, CancellationToken cancellationToken = default)
     {
         var sqlQuery = _context.Students
             .AsNoTracking()

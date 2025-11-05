@@ -18,7 +18,7 @@ public class CourseRepository : ICourseRepository
             .FirstOrDefaultAsync(c => c.Id == code, cancellationToken);
     }
 
-    public async Task<List<Course>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<List<Course>> SelectAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Courses
             .AsNoTracking()          // 読み取り専用クエリ - 変更追跡不要

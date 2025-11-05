@@ -18,7 +18,7 @@ public interface IStudentRepository
     /// <summary>
     /// 全学生を取得
     /// </summary>
-    Task<List<Student>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<List<Student>> SelectAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 条件付きで学生を取得
@@ -26,7 +26,7 @@ public interface IStudentRepository
     /// <param name="criteria">検索条件（Grade、Name、Email はすべてオプション）</param>
     /// <param name="cancellationToken">キャンセルトークン</param>
     /// <returns>フィルタリング済み学生一覧（登録日時昇順）</returns>
-    Task<List<Student>> GetFilteredAsync(StudentSearchCriteria criteria, CancellationToken cancellationToken = default);
+    Task<List<Student>> SelectFilteredAsync(StudentSearchCriteria criteria, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 学生を追加

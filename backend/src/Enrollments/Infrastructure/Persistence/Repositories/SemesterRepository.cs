@@ -18,7 +18,7 @@ public class SemesterRepository : ISemesterRepository
             .FirstOrDefaultAsync(s => EF.Property<int>(s, "_idYear") == id.Year && EF.Property<string>(s, "_idPeriod") == id.Period, cancellationToken);
     }
 
-    public async Task<List<Semester>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<List<Semester>> SelectAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Semesters
             .AsNoTracking()

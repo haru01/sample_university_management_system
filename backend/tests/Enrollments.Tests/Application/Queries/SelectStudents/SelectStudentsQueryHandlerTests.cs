@@ -1,4 +1,4 @@
-using Enrollments.Application.Queries.GetStudents;
+using Enrollments.Application.Queries.SelectStudents;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
@@ -7,14 +7,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Enrollments.Tests.Application.Queries;
 
 /// <summary>
-/// GetStudentsQueryHandlerのテスト
+/// SelectStudentsQueryHandlerのテスト
 /// </summary>
-public class GetStudentsQueryHandlerTests : IDisposable
+public class SelectStudentsQueryHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly GetStudentsQueryHandler _handler;
+    private readonly SelectStudentsQueryHandler _handler;
 
-    public GetStudentsQueryHandlerTests()
+    public SelectStudentsQueryHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
@@ -25,7 +25,7 @@ public class GetStudentsQueryHandlerTests : IDisposable
 
         // ハンドラーの依存関係を初期化
         var studentRepository = new StudentRepository(_context);
-        _handler = new GetStudentsQueryHandler(studentRepository);
+        _handler = new SelectStudentsQueryHandler(studentRepository);
     }
 
     public void Dispose()
@@ -52,7 +52,7 @@ public class GetStudentsQueryHandlerTests : IDisposable
         await _context.Students.AddRangeAsync(student1, student2, student3);
         await _context.SaveChangesAsync();
 
-        var query = new GetStudentsQuery(); // 条件なし
+        var query = new SelectStudentsQuery(); // 条件なし
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -86,7 +86,7 @@ public class GetStudentsQueryHandlerTests : IDisposable
         await _context.Students.AddRangeAsync(student1, student2, student3);
         await _context.SaveChangesAsync();
 
-        var query = new GetStudentsQuery { Grade = 2 };
+        var query = new SelectStudentsQuery { Grade = 2 };
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -118,7 +118,7 @@ public class GetStudentsQueryHandlerTests : IDisposable
         await _context.Students.AddRangeAsync(student1, student2, student3);
         await _context.SaveChangesAsync();
 
-        var query = new GetStudentsQuery { Name = "山田" };
+        var query = new SelectStudentsQuery { Name = "山田" };
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -151,7 +151,7 @@ public class GetStudentsQueryHandlerTests : IDisposable
         await _context.Students.AddRangeAsync(student1, student2, student3);
         await _context.SaveChangesAsync();
 
-        var query = new GetStudentsQuery { Email = "example.com" };
+        var query = new SelectStudentsQuery { Email = "example.com" };
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -186,7 +186,7 @@ public class GetStudentsQueryHandlerTests : IDisposable
         await _context.Students.AddRangeAsync(student1, student2, student3);
         await _context.SaveChangesAsync();
 
-        var query = new GetStudentsQuery { Grade = 2, Name = "山田" };
+        var query = new SelectStudentsQuery { Grade = 2, Name = "山田" };
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -209,7 +209,7 @@ public class GetStudentsQueryHandlerTests : IDisposable
         await _context.Students.AddAsync(student1);
         await _context.SaveChangesAsync();
 
-        var query = new GetStudentsQuery { Name = "存在しない名前" };
+        var query = new SelectStudentsQuery { Name = "存在しない名前" };
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -223,7 +223,7 @@ public class GetStudentsQueryHandlerTests : IDisposable
     public async Task 学生が1件も登録されていない場合()
     {
         // Arrange
-        var query = new GetStudentsQuery();
+        var query = new SelectStudentsQuery();
 
         // Act
         var result = await _handler.Handle(query, default);

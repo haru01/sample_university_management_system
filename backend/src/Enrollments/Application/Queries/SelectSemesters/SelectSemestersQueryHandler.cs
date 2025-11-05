@@ -2,23 +2,23 @@ using Enrollments.Application.Queries.Semesters;
 using Enrollments.Domain.SemesterAggregate;
 using MediatR;
 
-namespace Enrollments.Application.Queries.GetSemesters;
+namespace Enrollments.Application.Queries.SelectSemesters;
 
 /// <summary>
 /// 学期一覧取得クエリハンドラー
 /// </summary>
-public class GetSemestersQueryHandler : IRequestHandler<GetSemestersQuery, List<SemesterDto>>
+public class SelectSemestersQueryHandler : IRequestHandler<SelectSemestersQuery, List<SemesterDto>>
 {
     private readonly ISemesterRepository _semesterRepository;
 
-    public GetSemestersQueryHandler(ISemesterRepository semesterRepository)
+    public SelectSemestersQueryHandler(ISemesterRepository semesterRepository)
     {
         _semesterRepository = semesterRepository;
     }
 
-    public async Task<List<SemesterDto>> Handle(GetSemestersQuery request, CancellationToken cancellationToken)
+    public async Task<List<SemesterDto>> Handle(SelectSemestersQuery request, CancellationToken cancellationToken)
     {
-        var semesters = await _semesterRepository.GetAllAsync(cancellationToken);
+        var semesters = await _semesterRepository.SelectAllAsync(cancellationToken);
 
         return semesters
             .OrderByDescending(s => s.Id.Year)

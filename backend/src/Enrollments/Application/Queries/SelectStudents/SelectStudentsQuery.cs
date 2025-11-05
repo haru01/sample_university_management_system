@@ -1,12 +1,12 @@
 using Enrollments.Application.Queries.Students;
 using MediatR;
 
-namespace Enrollments.Application.Queries.GetStudents;
+namespace Enrollments.Application.Queries.SelectStudents;
 
 /// <summary>
 /// 学生一覧取得クエリ
 /// </summary>
-public record GetStudentsQuery : IRequest<List<StudentDto>>
+public record SelectStudentsQuery : IRequest<List<StudentDto>>
 {
     /// <summary>
     /// 名前で部分一致検索（オプション）

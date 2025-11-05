@@ -1,20 +1,20 @@
-using Enrollments.Application.Queries.GetSemesters;
+using Enrollments.Application.Queries.SelectSemesters;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
 using Microsoft.EntityFrameworkCore;
 
-namespace Enrollments.Tests.Application.Queries.GetSemesters;
+namespace Enrollments.Tests.Application.Queries.SelectSemesters;
 
 /// <summary>
-/// GetSemestersQueryHandlerのテスト
+/// SelectSemestersQueryHandlerのテスト
 /// </summary>
-public class GetSemestersQueryHandlerTests : IDisposable
+public class SelectSemestersQueryHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly GetSemestersQueryHandler _handler;
+    private readonly SelectSemestersQueryHandler _handler;
 
-    public GetSemestersQueryHandlerTests()
+    public SelectSemestersQueryHandlerTests()
     {
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -23,7 +23,7 @@ public class GetSemestersQueryHandlerTests : IDisposable
         _context = new CoursesDbContext(options);
 
         var semesterRepository = new SemesterRepository(_context);
-        _handler = new GetSemestersQueryHandler(semesterRepository);
+        _handler = new SelectSemestersQueryHandler(semesterRepository);
     }
 
     public void Dispose()
@@ -53,7 +53,7 @@ public class GetSemestersQueryHandlerTests : IDisposable
         await _context.Semesters.AddRangeAsync(semester1, semester2, semester3);
         await _context.SaveChangesAsync();
 
-        var query = new GetSemestersQuery();
+        var query = new SelectSemestersQuery();
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -85,7 +85,7 @@ public class GetSemestersQueryHandlerTests : IDisposable
         await _context.Semesters.AddRangeAsync(semester1, semester2, semester3);
         await _context.SaveChangesAsync();
 
-        var query = new GetSemestersQuery();
+        var query = new SelectSemestersQuery();
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -106,7 +106,7 @@ public class GetSemestersQueryHandlerTests : IDisposable
     public async Task 学期が1件も登録されていない場合()
     {
         // Arrange
-        var query = new GetSemestersQuery();
+        var query = new SelectSemestersQuery();
 
         // Act
         var result = await _handler.Handle(query, default);
@@ -133,7 +133,7 @@ public class GetSemestersQueryHandlerTests : IDisposable
         await _context.Semesters.AddAsync(semester);
         await _context.SaveChangesAsync();
 
-        var query = new GetSemestersQuery();
+        var query = new SelectSemestersQuery();
 
         // Act
         var result = await _handler.Handle(query, default);

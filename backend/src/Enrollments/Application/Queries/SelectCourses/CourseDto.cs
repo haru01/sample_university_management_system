@@ -1,4 +1,4 @@
-namespace Enrollments.Application.Queries.GetCourses;
+namespace Enrollments.Application.Queries.SelectCourses;
 
 public record CourseDto
 {

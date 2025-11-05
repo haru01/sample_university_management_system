@@ -1,4 +1,4 @@
-using Enrollments.Application.Queries.GetCourses;
+using Enrollments.Application.Queries.SelectCourses;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
@@ -7,14 +7,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Enrollments.Tests.Application.Queries;
 
 /// <summary>
-/// GetCoursesQueryHandlerのテスト
+/// SelectCoursesQueryHandlerのテスト
 /// </summary>
-public class GetCoursesQueryHandlerTests : IDisposable
+public class SelectCoursesQueryHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly GetCoursesQueryHandler _handler;
+    private readonly SelectCoursesQueryHandler _handler;
 
-    public GetCoursesQueryHandlerTests()
+    public SelectCoursesQueryHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
@@ -25,7 +25,7 @@ public class GetCoursesQueryHandlerTests : IDisposable
 
         // ハンドラーの依存関係を初期化
         var courseRepository = new CourseRepository(_context);
-        _handler = new GetCoursesQueryHandler(courseRepository);
+        _handler = new SelectCoursesQueryHandler(courseRepository);
     }
 
     public void Dispose()
@@ -59,7 +59,7 @@ public class GetCoursesQueryHandlerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var query = new GetCoursesQuery();
+        var query = new SelectCoursesQuery();
         var results = await _handler.Handle(query, default);
 
         // Assert
@@ -82,7 +82,7 @@ public class GetCoursesQueryHandlerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var query = new GetCoursesQuery();
+        var query = new SelectCoursesQuery();
         var results = await _handler.Handle(query, default);
 
         // Assert
@@ -99,7 +99,7 @@ public class GetCoursesQueryHandlerTests : IDisposable
         // データを登録しない
 
         // Act
-        var query = new GetCoursesQuery();
+        var query = new SelectCoursesQuery();
         var results = await _handler.Handle(query, default);
 
         // Assert
@@ -121,7 +121,7 @@ public class GetCoursesQueryHandlerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var query = new GetCoursesQuery();
+        var query = new SelectCoursesQuery();
         var results = await _handler.Handle(query, default);
 
         // Assert
@@ -155,7 +155,7 @@ public class GetCoursesQueryHandlerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var query = new GetCoursesQuery();
+        var query = new SelectCoursesQuery();
         var results = await _handler.Handle(query, default);
 
         // Assert

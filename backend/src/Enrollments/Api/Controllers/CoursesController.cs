@@ -1,6 +1,6 @@
 using Enrollments.Application.Commands.CreateCourse;
 using Enrollments.Application.Queries.GetCourseByCode;
-using Enrollments.Application.Queries.GetCourses;
+using Enrollments.Application.Queries.SelectCourses;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,7 +24,7 @@ public class CoursesController : ControllerBase
     [ProducesResponseType(typeof(List<CourseDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<CourseDto>>> GetCourses(CancellationToken cancellationToken)
     {
-        var query = new GetCoursesQuery();
+        var query = new SelectCoursesQuery();
         var result = await _mediator.Send(query, cancellationToken);
         return Ok(result);
     }

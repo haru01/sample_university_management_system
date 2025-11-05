@@ -1,6 +1,6 @@
 using Enrollments.Application.Commands.CreateSemester;
 using Enrollments.Application.Queries.GetCurrentSemester;
-using Enrollments.Application.Queries.GetSemesters;
+using Enrollments.Application.Queries.SelectSemesters;
 using Enrollments.Application.Queries.Semesters;
 using Enrollments.Domain.Exceptions;
 using MediatR;
@@ -26,7 +26,7 @@ public class SemestersController : ControllerBase
     [ProducesResponseType(typeof(List<SemesterDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<SemesterDto>>> GetSemesters(CancellationToken cancellationToken)
     {
-        var query = new GetSemestersQuery();
+        var query = new SelectSemestersQuery();
         var semesters = await _mediator.Send(query, cancellationToken);
         return Ok(semesters);
     }

@@ -2,21 +2,21 @@ using Enrollments.Application.Queries.Students;
 using Enrollments.Domain.StudentAggregate;
 using MediatR;
 
-namespace Enrollments.Application.Queries.GetStudents;
+namespace Enrollments.Application.Queries.SelectStudents;
 
 /// <summary>
 /// 学生一覧取得クエリハンドラー
 /// </summary>
-public class GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<StudentDto>>
+public class SelectStudentsQueryHandler : IRequestHandler<SelectStudentsQuery, List<StudentDto>>
 {
     private readonly IStudentRepository _studentRepository;
 
-    public GetStudentsQueryHandler(IStudentRepository studentRepository)
+    public SelectStudentsQueryHandler(IStudentRepository studentRepository)
     {
         _studentRepository = studentRepository;
     }
 
-    public async Task<List<StudentDto>> Handle(GetStudentsQuery request, CancellationToken cancellationToken)
+    public async Task<List<StudentDto>> Handle(SelectStudentsQuery request, CancellationToken cancellationToken)
     {
         // Application Queryを検索条件に変換
         var searchCriteria = new StudentSearchCriteria
@@ -27,7 +27,7 @@ public class GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, List<St
         };
 
         // SQLレベルでフィルタリング・ソート
-        var students = await _studentRepository.GetFilteredAsync(searchCriteria, cancellationToken);
+        var students = await _studentRepository.SelectFilteredAsync(searchCriteria, cancellationToken);
 
         // DTO に変換
         return students
