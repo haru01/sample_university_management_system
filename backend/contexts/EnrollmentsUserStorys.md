@@ -11,13 +11,13 @@
 
 ## CommandHandler/QueryHandler一覧
 
-### コース管理 (Phase 1 - 完了)
+### コースマスタ管理 (Phase 1 - 完了)
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
-| CreateCourseCommandHandler | CreateCourseCommand | コースを登録 | ✅ 完了 |
-| GetCoursesQueryHandler | GetCoursesQuery | コース一覧を取得 | ✅ 完了 |
-| GetCourseByCodeQueryHandler | GetCourseByCodeQuery | コースを取得 | ✅ 完了 |
+| CreateCourseCommandHandler | CreateCourseCommand | コースマスタを登録 | ✅ 完了 |
+| GetCoursesQueryHandler | GetCoursesQuery | コースマスタ一覧を取得 | ✅ 完了 |
+| GetCourseByCodeQueryHandler | GetCourseByCodeQuery | コースマスタを取得 | ✅ 完了 |
 
 ### 学生管理 (Phase 2 - 完了)
 
@@ -36,16 +36,16 @@
 | GetSemestersQueryHandler | GetSemestersQuery | 学期一覧を取得 | ✅ 完了 |
 | GetCurrentSemesterQueryHandler | GetCurrentSemesterQuery | 現在の学期を取得 | ✅ 完了 |
 
-### コースステータス管理 (Phase 3.5 - 未実装)
+### コース開講管理 (Phase 3.5 - 未実装)
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
-| CreateCourseCommandHandler（修正） | CreateCourseCommand | コース登録時にActiveステータス自動作成 | ⬜ 未実装 |
-| ActivateCourseCommandHandler | ActivateCourseCommand | コースを有効化 | ⬜ 未実装 |
-| ArchiveCourseCommandHandler | ArchiveCourseCommand | コースをアーカイブ | ⬜ 未実装 |
-| SuspendCourseCommandHandler | SuspendCourseCommand | コースを休止 | ⬜ 未実装 |
-| GetCourseStatusHistoryQueryHandler | GetCourseStatusHistoryQuery | コースのステータス履歴を取得 | ⬜ 未実装 |
-| GetActiveCoursesByDateQueryHandler | GetActiveCoursesByDateQuery | 指定日時点で有効なコース一覧を取得 | ⬜ 未実装 |
+| CreateCourseOfferingCommandHandler | CreateCourseOfferingCommand | コース開講を登録 | ⬜ 未実装 |
+| UpdateCourseOfferingCommandHandler | UpdateCourseOfferingCommand | コース開講情報を更新 | ⬜ 未実装 |
+| GetCourseOfferingsBySemesterQueryHandler | GetCourseOfferingsBySemesterQuery | 学期ごとのコース開講一覧を取得 | ⬜ 未実装 |
+| GetCourseOfferingQueryHandler | GetCourseOfferingQuery | コース開講詳細を取得 | ⬜ 未実装 |
+| CancelCourseOfferingCommandHandler | CancelCourseOfferingCommand | コース開講をキャンセル | ⬜ 未実装 |
+| CopyCourseOfferingsFromPreviousSemesterCommandHandler | CopyCourseOfferingsFromPreviousSemesterCommand | 前学期のコース開講情報を一括コピー | ⬜ 未実装 |
 
 ### 履修登録 (Phase 4 - 未実装)
 
@@ -58,32 +58,28 @@
 
 ---
 
-## エピック1: コース管理
+## エピック1: コースマスタ管理
 
-### ✅ US-E01: コースを登録できる
+### ✅ US-E01: コースマスタを登録できる
 
 **ストーリー:**
-API利用者として、新しいコースを登録できるようにしたい。なぜなら、学生が履修登録するためにはコース情報が必要だから。
+API利用者として、新しいコースマスタを登録できるようにしたい。なぜなら、コース開講や履修登録のためにコースの基本情報が必要だから。
 
 **Handler:** `CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, string>`
 
 **受け入れ条件:**
 
 ```gherkin
-Scenario: 有効なコース情報で新しいコースを登録する
+Scenario: 有効なコース情報で新しいコースマスタを登録する
   Given データベースが利用可能である
   When CreateCourseCommandを実行する
     - CourseCode: "CS101"
     - Name: "プログラミング入門"
-    - Credits: 3
-    - MaxCapacity: 30
+    - Description: "プログラミングの基礎を学ぶ入門コース"
   Then コースコード "CS101" が返される
-  And データベースにコースが保存されている
+  And データベースにコースマスタが保存されている
   And コース名が "プログラミング入門" である
-  And 単位数が 3 である
-  And CourseStatusHistoryにActiveステータスのレコードが自動作成される（Phase 3.5実装後）
-  And ステータスのValidFromが現在日時である
-  And ステータスのValidToが null である
+  And 説明が "プログラミングの基礎を学ぶ入門コース" である
 ```
 
 ```gherkin
@@ -92,22 +88,9 @@ Scenario: 不正なコースコード形式で登録を試みる
   When CreateCourseCommandを実行する
     - CourseCode: "invalid-code"
     - Name: "テストコース"
-    - Credits: 3
-    - MaxCapacity: 30
+    - Description: "テスト用の説明"
   Then ArgumentException がスローされる
   And エラーメッセージに "Invalid course code format" が含まれる
-```
-
-```gherkin
-Scenario: 単位数が範囲外のコースを登録を試みる
-  Given データベースが利用可能である
-  When CreateCourseCommandを実行する
-    - CourseCode: "CS101"
-    - Name: "テストコース"
-    - Credits: 11
-    - MaxCapacity: 30
-  Then ArgumentException がスローされる
-  And エラーメッセージに "Credits must be between 1 and 10" が含まれる
 ```
 
 ```gherkin
@@ -116,8 +99,7 @@ Scenario: 既に存在するコースコードで登録を試みる
   When CreateCourseCommandを実行する
     - CourseCode: "CS101"
     - Name: "新しいコース"
-    - Credits: 3
-    - MaxCapacity: 30
+    - Description: "新しい説明"
   Then InvalidOperationException がスローされる
   And エラーメッセージに "already exists" が含まれる
 ```
@@ -125,29 +107,29 @@ Scenario: 既に存在するコースコードで登録を試みる
 **制約:**
 
 - コースコード形式: 大文字2-4文字 + 数字3-4桁（例: CS101, MATH1001）
-- 単位数: 1〜10の範囲
-- 定員: 1以上の整数
 - コース名: 必須、空白不可
+- 説明: オプション（nullまたは空文字列可）
+- 注意: 単位数(Credits)と定員(MaxCapacity)はコース開講時(CourseOffering)に指定する
 
 **実装状態:** ✅ 完了
 
 ---
 
-### ✅ US-E02: コース一覧を取得できる
+### ✅ US-E02: コースマスタ一覧を取得できる
 
 **ストーリー:**
-API利用者として、登録されているコース一覧を取得できるようにしたい。なぜなら、履修可能なコースを表示するためにコース情報が必要だから。
+API利用者として、登録されているコースマスタ一覧を取得できるようにしたい。なぜなら、コース開講の際にコースマスタ情報が必要だから。
 
 **Handler:** `GetCoursesQueryHandler : IRequestHandler<GetCoursesQuery, List<CourseDto>>`
 
 **受け入れ条件:**
 
 ```gherkin
-Scenario: 登録されている全コースを取得する
-  Given データベースに以下のコースが登録されている
-    | コースコード | コース名       | 単位数 | 定員 |
-    | CS101        | プログラミング入門 | 3      | 30   |
-    | MATH201      | 線形代数       | 4      | 25   |
+Scenario: 登録されている全コースマスタを取得する
+  Given データベースに以下のコースマスタが登録されている
+    | コースコード | コース名       | 説明                   |
+    | CS101        | プログラミング入門 | プログラミングの基礎   |
+    | MATH201      | 線形代数       | 行列と線形変換         |
   When GetCoursesQueryを実行する
   Then 2件のCourseDtoが返される
   And 1件目のコースコードが "CS101" である
@@ -157,50 +139,48 @@ Scenario: 登録されている全コースを取得する
 ```
 
 ```gherkin
-Scenario: コースが1件も登録されていない場合
-  Given データベースにコースが登録されていない
+Scenario: コースマスタが1件も登録されていない場合
+  Given データベースにコースマスタが登録されていない
   When GetCoursesQueryを実行する
   Then 空のリスト（0件）が返される
 ```
 
 **制約:**
 
-- 全てのコースを取得（ページネーション未実装）
+- 全てのコースマスタを取得（ページネーション未実装）
 - コース情報は読み取り専用
-- **Phase 3.5実装後の注意**: このQueryはステータスに関わらず全コースを返す（管理者用）。学生が履修登録可能なコースのみを取得する場合は `GetActiveCoursesByDateQuery` (US-CS05) を使用すること
+- **Phase 3.5実装後の注意**: 実際の開講情報(単位数、定員、教員)は `GetCourseOfferingsBySemesterQuery` (US-CO03) で取得すること
 
 **実装状態:** ✅ 完了
 
 ---
 
-### ✅ US-E03: コースを取得できる
+### ✅ US-E03: コースマスタを取得できる
 
 **ストーリー:**
-API利用者として、コースコードを指定して特定のコースの詳細情報を取得できるようにしたい。なぜなら、履修登録前にコースの詳細を確認する必要があるから。
+API利用者として、コースコードを指定して特定のコースマスタの詳細情報を取得できるようにしたい。なぜなら、コース開講時や履修登録前にコースの基本情報を確認する必要があるから。
 
 **Handler:** `GetCourseByCodeQueryHandler : IRequestHandler<GetCourseByCodeQuery, CourseDto>`
 
 **受け入れ条件:**
 
 ```gherkin
-Scenario: 存在するコースコードでコースを取得する
-  Given データベースにコースコード "CS101" のコースが登録されている
+Scenario: 存在するコースコードでコースマスタを取得する
+  Given データベースにコースコード "CS101" のコースマスタが登録されている
     - CourseCode: "CS101"
     - Name: "プログラミング入門"
-    - Credits: 3
-    - MaxCapacity: 30
-  When GetStudentsQueryを実行する
+    - Description: "プログラミングの基礎を学ぶ入門コース"
+  When GetCourseByCodeQueryを実行する
     - CourseCode: "CS101"
   Then CourseDtoが返される
   And コースコードが "CS101" である
   And コース名が "プログラミング入門" である
-  And 単位数が 3 である
-  And 定員が 30 である
+  And 説明が "プログラミングの基礎を学ぶ入門コース" である
 ```
 
 ```gherkin
 Scenario: 存在しないコースコードで取得を試みる
-  Given データベースにコースコード "XXX999" のコースが登録されていない
+  Given データベースにコースコード "XXX999" のコースマスタが登録されていない
   When GetCourseByCodeQueryを実行する
     - CourseCode: "XXX999"
   Then KeyNotFoundException がスローされる
@@ -211,9 +191,422 @@ Scenario: 存在しないコースコードで取得を試みる
 
 - コースコードは大文字小文字を区別しない（自動的に大文字変換）
 - 存在しないコースの場合は404エラー
-- **Phase 3.5実装後の注意**: このQueryはステータスに関わらずコースを返す（管理者用）。履修登録可能なコースのみをチェックする場合は、取得後に `GetCourseStatusHistoryQuery` で現在のステータスを確認するか、`GetActiveCoursesByDateQuery` を使用すること
+- **Phase 3.5実装後の注意**: 学期ごとの開講情報(単位数、定員、教員、ステータス)は `GetCourseOfferingQuery` (US-CO04) を使用すること
 
 **実装状態:** ✅ 完了
+
+---
+
+## エピック1.5: コース開講管理
+
+### US-CO01: コース開講を登録できる
+
+**ストーリー:**
+API利用者として、特定の学期にコースを開講登録できるようにしたい。なぜなら、学生が履修登録するためには学期ごとの開講情報が必要だから。
+
+**Handler:** `CreateCourseOfferingCommandHandler : IRequestHandler<CreateCourseOfferingCommand, int>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 有効なコース開講情報で新しいコース開講を登録する
+  Given データベースにコースコード "CS101" のコースマスタが登録されている
+  And データベースに学期 (2024, Spring) が登録されている
+  When CreateCourseOfferingCommandを実行する
+    - CourseCode: "CS101"
+    - SemesterId: (2024, Spring)
+    - Credits: 3
+    - MaxCapacity: 30
+    - Instructor: "田中教授"
+  Then OfferingIdが返される
+  And データベースにCourseOfferingが保存されている
+  And コースコードが "CS101" である
+  And 単位数が 3 である
+  And 定員が 30 である
+  And 教員が "田中教授" である
+  And ステータスが "Active" である
+```
+
+```gherkin
+Scenario: 存在しないコースコードで開講を試みる
+  Given データベースにコースコード "XXX999" のコースマスタが登録されていない
+  And データベースに学期 (2024, Spring) が登録されている
+  When CreateCourseOfferingCommandを実行する
+    - CourseCode: "XXX999"
+    - SemesterId: (2024, Spring)
+    - Credits: 3
+    - MaxCapacity: 30
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "Course not found" が含まれる
+```
+
+```gherkin
+Scenario: 同一学期に既に開講されているコースで登録を試みる
+  Given データベースにコースコード "CS101" のコースマスタが登録されている
+  And データベースに学期 (2024, Spring) が登録されている
+  And 学期 (2024, Spring) にコース "CS101" が既に開講されている
+  When CreateCourseOfferingCommandを実行する
+    - CourseCode: "CS101"
+    - SemesterId: (2024, Spring)
+    - Credits: 4
+    - MaxCapacity: 25
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "already offered in this semester" が含まれる
+```
+
+**制約:**
+
+- CourseCodeとSemesterIdの組み合わせはユニーク
+- 単位数: 1〜10の範囲
+- 定員: 1以上の整数
+- 教員名: オプション（nullまたは空文字列可）
+- ステータス: デフォルトで "Active"
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### US-CO02: コース開講情報を更新できる
+
+**ストーリー:**
+API利用者として、既に登録されたコース開講の情報（単位数、定員、教員）を更新できるようにしたい。なぜなら、開講後に変更が必要になる場合があるから。
+
+**Handler:** `UpdateCourseOfferingCommandHandler : IRequestHandler<UpdateCourseOfferingCommand, Unit>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 既存のコース開講情報を更新する
+  Given データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1
+    - CourseCode: "CS101"
+    - SemesterId: (2024, Spring)
+    - Credits: 3
+    - MaxCapacity: 30
+    - Instructor: "田中教授"
+    - Status: Active
+  When UpdateCourseOfferingCommandを実行する
+    - OfferingId: 1
+    - Credits: 4
+    - MaxCapacity: 35
+    - Instructor: "鈴木教授"
+  Then 更新が成功する
+  And データベースのCourseOfferingが更新されている
+  And 単位数が 4 である
+  And 定員が 35 である
+  And 教員が "鈴木教授" である
+```
+
+```gherkin
+Scenario: 存在しないOfferingIdで更新を試みる
+  Given データベースにOfferingId 999 のCourseOfferingが存在しない
+  When UpdateCourseOfferingCommandを実行する
+    - OfferingId: 999
+    - Credits: 3
+    - MaxCapacity: 30
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "CourseOffering not found" が含まれる
+```
+
+```gherkin
+Scenario: キャンセル済みのコース開講を更新しようとする
+  Given データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1
+    - Status: Cancelled
+  When UpdateCourseOfferingCommandを実行する
+    - OfferingId: 1
+    - Credits: 4
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Cannot update cancelled offering" が含まれる
+```
+
+**制約:**
+
+- CourseCodeとSemesterIdは変更不可（新規開講として作成すること）
+- Statusが"Cancelled"の場合は更新不可
+- 単位数: 1〜10の範囲
+- 定員: 1以上の整数
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### US-CO03: 学期ごとのコース開講一覧を取得できる
+
+**ストーリー:**
+API利用者として、特定の学期に開講されているコース一覧を取得できるようにしたい。なぜなら、学生が履修登録可能なコースを確認する必要があるから。
+
+**Handler:** `GetCourseOfferingsBySemesterQueryHandler : IRequestHandler<GetCourseOfferingsBySemesterQuery, List<CourseOfferingDto>>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 特定学期の全コース開講を取得する
+  Given データベースにコースコード "CS101" のコースマスタが登録されている
+  And データベースにコースコード "MATH201" のコースマスタが登録されている
+  And データベースに学期 (2024, Spring) が登録されている
+  And 学期 (2024, Spring) に以下のCourseOfferingが存在する
+    | CourseCode | Credits | MaxCapacity | Instructor | Status |
+    | CS101      | 3       | 30          | 田中教授   | Active |
+    | MATH201    | 4       | 25          | 鈴木教授   | Active |
+  When GetCourseOfferingsBySemesterQueryを実行する
+    - SemesterId: (2024, Spring)
+  Then 2件のCourseOfferingDtoが返される
+  And 1件目のコースコードが "CS101" である
+  And 1件目の単位数が 3 である
+  And 2件目のコースコードが "MATH201" である
+```
+
+```gherkin
+Scenario: Activeステータスのみをフィルタリングして取得する
+  Given データベースに学期 (2024, Spring) が登録されている
+  And 学期 (2024, Spring) に以下のCourseOfferingが存在する
+    | CourseCode | Status    |
+    | CS101      | Active    |
+    | MATH201    | Cancelled |
+    | ENG101     | Active    |
+  When GetCourseOfferingsBySemesterQueryを実行する
+    - SemesterId: (2024, Spring)
+    - StatusFilter: Active
+  Then 2件のCourseOfferingDtoが返される
+  And 全てのステータスが "Active" である
+```
+
+```gherkin
+Scenario: 開講が1件も登録されていない学期
+  Given データベースに学期 (2024, Fall) が登録されている
+  And 学期 (2024, Fall) にCourseOfferingが存在しない
+  When GetCourseOfferingsBySemesterQueryを実行する
+    - SemesterId: (2024, Fall)
+  Then 空のリスト（0件）が返される
+```
+
+**制約:**
+
+- StatusFilterパラメータはオプション（未指定時は全ステータスを返す）
+- CourseOfferingDtoにはコースマスタ情報（Name, Description）も含める
+- ページネーション未実装
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### US-CO04: コース開講詳細を取得できる
+
+**ストーリー:**
+API利用者として、OfferingIdを指定して特定のコース開講の詳細情報を取得できるようにしたい。なぜなら、履修登録前にコースの詳細を確認する必要があるから。
+
+**Handler:** `GetCourseOfferingQueryHandler : IRequestHandler<GetCourseOfferingQuery, CourseOfferingDto>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 存在するOfferingIdでコース開講詳細を取得する
+  Given データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1
+    - CourseCode: "CS101"
+    - CourseName: "プログラミング入門"
+    - SemesterId: (2024, Spring)
+    - Credits: 3
+    - MaxCapacity: 30
+    - Instructor: "田中教授"
+    - Status: Active
+  When GetCourseOfferingQueryを実行する
+    - OfferingId: 1
+  Then CourseOfferingDtoが返される
+  And OfferingIdが 1 である
+  And コースコードが "CS101" である
+  And コース名が "プログラミング入門" である
+  And 単位数が 3 である
+  And 定員が 30 である
+  And 教員が "田中教授" である
+```
+
+```gherkin
+Scenario: 存在しないOfferingIdで取得を試みる
+  Given データベースにOfferingId 999 のCourseOfferingが存在しない
+  When GetCourseOfferingQueryを実行する
+    - OfferingId: 999
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "CourseOffering not found" が含まれる
+```
+
+**制約:**
+
+- CourseOfferingDtoにはコースマスタ情報（Name, Description）も含める
+- 学期情報（Year, Term）も含める
+- Statusに関わらず全ての開講情報を返す
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### US-CO05: コース開講をキャンセルできる
+
+**ストーリー:**
+API利用者として、既に登録されたコース開講をキャンセルできるようにしたい。なぜなら、教員の都合や履修者数不足により開講を取りやめる場合があるから。
+
+**Handler:** `CancelCourseOfferingCommandHandler : IRequestHandler<CancelCourseOfferingCommand, Unit>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: Activeなコース開講をキャンセルする
+  Given データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1
+    - Status: Active
+  When CancelCourseOfferingCommandを実行する
+    - OfferingId: 1
+  Then キャンセルが成功する
+  And データベースのCourseOfferingのステータスが "Cancelled" に更新されている
+```
+
+```gherkin
+Scenario: 既にキャンセル済みのコース開講をキャンセルしようとする
+  Given データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1
+    - Status: Cancelled
+  When CancelCourseOfferingCommandを実行する
+    - OfferingId: 1
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "already cancelled" が含まれる
+```
+
+```gherkin
+Scenario: 履修登録者がいるコース開講をキャンセルしようとする
+  Given データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1
+    - Status: Active
+  And OfferingId 1 に3名の学生が履修登録している
+  When CancelCourseOfferingCommandを実行する
+    - OfferingId: 1
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Cannot cancel offering with enrollments" が含まれる
+```
+
+**制約:**
+
+- キャンセル後の再有効化は不可（新規開講として作成すること）
+- 履修登録者が1名でもいる場合はキャンセル不可
+- キャンセルは論理削除（物理削除は行わない）
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### US-CO06: 前学期のコース開講情報を一括コピーできる
+
+**ストーリー:**
+API利用者として、前学期のコース開講情報を新学期に一括コピーできるようにしたい。なぜなら、毎学期同じコースを手動で登録するのは非効率だから。
+
+**Handler:** `CopyCourseOfferingsFromPreviousSemesterCommandHandler : IRequestHandler<CopyCourseOfferingsFromPreviousSemesterCommand, CopyCourseOfferingsResult>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 前学期の全コース開講情報を新学期にコピーする
+  Given データベースに学期 (2024, Spring) が存在する
+  And 学期 (2024, Spring) に以下のCourseOfferingが存在する
+    | CourseCode | Credits | MaxCapacity | Instructor | Status |
+    | CS101      | 3       | 30          | 田中教授   | Active |
+    | MATH201    | 4       | 25          | 鈴木教授   | Active |
+    | ENG101     | 2       | 50          | 佐藤教授   | Cancelled |
+  And データベースに学期 (2024, Fall) が存在する
+  And 学期 (2024, Fall) にCourseOfferingが存在しない
+  When CopyCourseOfferingsFromPreviousSemesterCommandを実行する
+    - FromSemesterId: (2024, Spring)
+    - ToSemesterId: (2024, Fall)
+  Then 2件のCourseOfferingが作成される（StatusがActiveのもののみ）
+  And 結果のTotalCopiedが 2 である
+  And 結果のSkippedが 1 である（Cancelledのため）
+  And 新学期のCourseOfferingに "CS101" が存在する
+  And 新学期のCourseOfferingに "MATH201" が存在する
+  And 新学期のCourseOfferingに "ENG101" が存在しない
+```
+
+```gherkin
+Scenario: 特定のコースのみをフィルタリングしてコピーする
+  Given データベースに学期 (2024, Spring) が存在する
+  And 学期 (2024, Spring) に以下のCourseOfferingが存在する
+    | CourseCode | Status |
+    | CS101      | Active |
+    | MATH201    | Active |
+    | ENG101     | Active |
+  And データベースに学期 (2024, Fall) が存在する
+  When CopyCourseOfferingsFromPreviousSemesterCommandを実行する
+    - FromSemesterId: (2024, Spring)
+    - ToSemesterId: (2024, Fall)
+    - CourseCodeFilter: ["CS101", "MATH201"]
+  Then 2件のCourseOfferingが作成される
+  And 新学期のCourseOfferingに "CS101" が存在する
+  And 新学期のCourseOfferingに "MATH201" が存在する
+  And 新学期のCourseOfferingに "ENG101" が存在しない
+```
+
+```gherkin
+Scenario: 定員を一括で上書きしてコピーする
+  Given データベースに学期 (2024, Spring) が存在する
+  And 学期 (2024, Spring) に以下のCourseOfferingが存在する
+    | CourseCode | MaxCapacity |
+    | CS101      | 30          |
+    | MATH201    | 25          |
+  And データベースに学期 (2024, Fall) が存在する
+  When CopyCourseOfferingsFromPreviousSemesterCommandを実行する
+    - FromSemesterId: (2024, Spring)
+    - ToSemesterId: (2024, Fall)
+    - OverrideMaxCapacity: 40
+  Then 2件のCourseOfferingが作成される
+  And 全てのMaxCapacityが 40 である
+```
+
+```gherkin
+Scenario: 既に開講が存在するコースはスキップする
+  Given データベースに学期 (2024, Spring) が存在する
+  And 学期 (2024, Spring) に以下のCourseOfferingが存在する
+    | CourseCode | Status |
+    | CS101      | Active |
+    | MATH201    | Active |
+  And データベースに学期 (2024, Fall) が存在する
+  And 学期 (2024, Fall) にコース "CS101" が既に開講されている
+  When CopyCourseOfferingsFromPreviousSemesterCommandを実行する
+    - FromSemesterId: (2024, Spring)
+    - ToSemesterId: (2024, Fall)
+  Then 1件のCourseOfferingが作成される（MATH201のみ）
+  And 結果のTotalCopiedが 1 である
+  And 結果のSkippedが 1 である（CS101は既存のため）
+  And 結果のErrorsが空である
+```
+
+**制約:**
+
+- Statusが"Cancelled"のコース開講はコピーしない
+- CourseCodeFilterが指定された場合、そのコースのみコピーする
+- OverrideMaxCapacityが指定された場合、全てのコースの定員を上書きする
+- OverrideInstructorが指定された場合、全てのコースの教員を上書きする
+- ToSemesterIdに既に同じCourseCodeの開講が存在する場合はスキップする
+- エラーが発生したコースはスキップし、結果のErrorsリストに追加する
+
+**Command定義:**
+
+```csharp
+public record CopyCourseOfferingsFromPreviousSemesterCommand : IRequest<CopyCourseOfferingsResult>
+{
+    public SemesterId FromSemesterId { get; init; }
+    public SemesterId ToSemesterId { get; init; }
+    public List<string>? CourseCodeFilter { get; init; }
+    public int? OverrideMaxCapacity { get; init; }
+    public string? OverrideInstructor { get; init; }
+}
+
+public class CopyCourseOfferingsResult
+{
+    public int TotalCopied { get; init; }
+    public int Skipped { get; init; }
+    public List<string> Errors { get; init; } = new();
+}
+```
+
+**実装状態:** ⬜ 未実装
 
 ---
 
@@ -469,6 +862,8 @@ Scenario: 新しい学期を登録する
     - Period: Spring
     - StartDate: 2024-04-01
     - EndDate: 2024-09-30
+    - EnrollmentDeadline: 2024-04-15
+    - CancellationDeadline: 2024-05-31
   Then Semesterエンティティが作成される
   And SemesterRepositoryに保存される
   And SemesterId (2024, Spring) が返される
@@ -501,12 +896,26 @@ Scenario: 終了日が開始日より前の学期を登録しようとする
   And SemesterRepositoryに保存されない
 ```
 
+```gherkin
+Scenario: 期限の順序が不正な学期を登録しようとする
+  Given SemesterRepositoryが利用可能である
+  When CreateSemesterCommandを実行する
+    - Year: 2024
+    - Period: Spring
+    - StartDate: 2024-04-01
+    - EndDate: 2024-09-30
+    - EnrollmentDeadline: 2024-06-01
+    - CancellationDeadline: 2024-05-31
+  Then DomainException "Deadlines must be: StartDate < EnrollmentDeadline < CancellationDeadline < EndDate" がスローされる
+  And SemesterRepositoryに保存されない
+```
+
 **制約:**
 
 - 学期: Spring または Fall
 - 年度: 2000〜2100の範囲
 - 同じ年度・学期の組み合わせは一意
-- 終了日 > 開始日
+- 日付順序: StartDate < EnrollmentDeadline < CancellationDeadline < EndDate
 
 **実装状態:** ⬜ 未実装
 
@@ -598,356 +1007,6 @@ Scenario: 現在の学期が存在しない場合
 
 ---
 
-## エピック3.5: コースステータス管理
-
-### ⬜ US-CS00: コース登録時に自動的にActiveステータスを作成する（統合タスク）
-
-**ストーリー:**
-開発者として、コース登録時に自動的にActiveステータスの履歴を作成したい。なぜなら、新規登録されたコースはデフォルトで履修登録可能な状態にする必要があるから。
-
-**Handler:** `CreateCourseCommandHandler` の修正（既存）
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: コース登録時にActiveステータスが自動作成される
-  Given データベースが利用可能である
-  When CreateCourseCommandを実行する
-    - CourseCode: "CS101"
-    - Name: "プログラミング入門"
-    - Credits: 3
-    - MaxCapacity: 30
-  Then コースコード "CS101" が返される
-  And データベースにコースが保存されている
-  And CourseStatusHistoryにレコードが1件作成されている
-  And ステータスが "Active" である
-  And ValidFromが現在日時である
-  And ValidToが null である
-  And Reasonが "新規登録" または null である
-```
-
-**制約:**
-
-- CreateCourseCommandHandler内で、Courseエンティティ保存後にCourseStatusHistoryレコードを自動作成
-- トランザクション内で両方のエンティティを保存（どちらかが失敗した場合はロールバック）
-- US-E01の受け入れ条件に追加シナリオとして記載済み
-
-**実装状態:** ⬜ 未実装（Phase 3.5で実装）
-
-**実装優先順位:** Phase 3.5の最優先タスク（他のステータス管理機能の前提条件）
-
----
-
-### ⬜ US-CS01: コースを有効化できる
-
-**ストーリー:**
-管理者として、コースを有効化できるようにしたい。なぜなら、新規開講や休止中のコースを再開させる際にステータスを変更する必要があるから。
-
-**Handler:** `ActivateCourseCommandHandler : IRequestHandler<ActivateCourseCommand, Unit>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 新規コースを有効化する
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And コースにステータス履歴が存在しない（初回有効化）
-  When ActivateCourseCommandを実行する
-    - CourseCode: "CS101"
-    - ValidFrom: 2024-04-01
-    - Reason: "新規開講"
-  Then CourseStatusHistoryエンティティが作成される
-  And Statusが "Active" である
-  And ValidFromが 2024-04-01 である
-  And ValidToが null である
-  And データベースに保存される
-```
-
-```gherkin
-Scenario: 休止中のコースを再有効化する
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスが "Suspended" である（2024-01-01〜現在）
-  When ActivateCourseCommandを実行する
-    - CourseCode: "CS101"
-    - ValidFrom: 2024-04-01
-    - Reason: "再開"
-  Then 既存のSuspendedステータスのValidToが 2024-03-31 に更新される
-  And 新しいActiveステータスのレコードが作成される
-  And 新しいレコードのValidFromが 2024-04-01 である
-  And 新しいレコードのValidToが null である
-```
-
-```gherkin
-Scenario: 既に有効化されているコースを再度有効化しようとする
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスが "Active" である（ValidToが null）
-  When ActivateCourseCommandを実行する
-    - CourseCode: "CS101"
-  Then InvalidOperationException がスローされる
-  And エラーメッセージに "Course is already active" が含まれる
-```
-
-```gherkin
-Scenario: 存在しないコースコードで有効化を試みる
-  Given データベースにコースコード "XXX999" のコースが存在しない
-  When ActivateCourseCommandを実行する
-    - CourseCode: "XXX999"
-  Then KeyNotFoundException がスローされる
-  And エラーメッセージに "Course not found" が含まれる
-```
-
-```gherkin
-Scenario: 開始日が過去のステータス終了日より前の日付で有効化を試みる
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 最新のステータス履歴のValidToが 2024-03-31 である
-  When ActivateCourseCommandを実行する
-    - CourseCode: "CS101"
-    - ValidFrom: 2024-03-01
-  Then InvalidOperationException がスローされる
-  And エラーメッセージに "ValidFrom must be after the previous status ValidTo date" が含まれる
-```
-
-**制約:**
-
-- ValidFromは必須
-- ValidFromは過去のステータスValidToの翌日以降である必要がある
-- 既にActiveステータス（ValidTo = null）の場合は重複有効化不可
-- 理由（Reason）はオプション、最大200文字
-- 新しいステータスを追加する際、直前のステータスのValidToを自動更新（ValidFrom - 1日）
-
-**実装状態:** ⬜ 未実装
-
----
-
-### ⬜ US-CS02: コースをアーカイブできる
-
-**ストーリー:**
-管理者として、コースをアーカイブできるようにしたい。なぜなら、開講終了したコースを履修登録不可にしながらも、履歴として保持する必要があるから。
-
-**Handler:** `ArchiveCourseCommandHandler : IRequestHandler<ArchiveCourseCommand, Unit>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 有効なコースをアーカイブする
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスが "Active" である（2024-04-01〜現在）
-  When ArchiveCourseCommandを実行する
-    - CourseCode: "CS101"
-    - ValidTo: 2024-09-30
-    - Reason: "カリキュラム改定により廃止"
-  Then 既存のActiveステータスのValidToが 2024-09-30 に更新される
-  And 新しいArchivedステータスのレコードが作成される
-  And 新しいレコードのValidFromが 2024-10-01 である
-  And 新しいレコードのValidToが null である
-```
-
-```gherkin
-Scenario: 既にアーカイブされているコースを再度アーカイブしようとする
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスが "Archived" である
-  When ArchiveCourseCommandを実行する
-    - CourseCode: "CS101"
-  Then InvalidOperationException がスローされる
-  And エラーメッセージに "Course is already archived" が含まれる
-```
-
-```gherkin
-Scenario: 休止中のコースをアーカイブする
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスが "Suspended" である
-  When ArchiveCourseCommandを実行する
-    - CourseCode: "CS101"
-    - ValidTo: 2024-09-30
-    - Reason: "開講中止"
-  Then 正常にアーカイブされる
-```
-
-```gherkin
-Scenario: 終了日が開始日より前の日付でアーカイブを試みる
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスのValidFromが 2024-04-01 である
-  When ArchiveCourseCommandを実行する
-    - CourseCode: "CS101"
-    - ValidTo: 2024-03-01
-  Then InvalidOperationException がスローされる
-  And エラーメッセージに "ValidTo must be after ValidFrom" が含まれる
-```
-
-**制約:**
-
-- ValidToは必須
-- ValidToは現在のステータスのValidFrom以降である必要がある
-- Archived状態からの再有効化も可能（別コマンド）
-- アーカイブされたコースは新規履修登録不可
-- 既存の履修登録には影響しない
-
-**実装状態:** ⬜ 未実装
-
----
-
-### ⬜ US-CS03: コースを休止できる
-
-**ストーリー:**
-管理者として、コースを一時的に休止できるようにしたい。なぜなら、担当教員の不在や受講希望者不足により一時的に開講を見送る場合があるから。
-
-**Handler:** `SuspendCourseCommandHandler : IRequestHandler<SuspendCourseCommand, Unit>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 有効なコースを休止する
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスが "Active" である（2024-04-01〜現在）
-  When SuspendCourseCommandを実行する
-    - CourseCode: "CS101"
-    - ValidTo: 2024-09-30
-    - Reason: "担当教員不在のため一時休止"
-  Then 既存のActiveステータスのValidToが 2024-09-30 に更新される
-  And 新しいSuspendedステータスのレコードが作成される
-  And 新しいレコードのValidFromが 2024-10-01 である
-  And 新しいレコードのValidToが null である
-```
-
-```gherkin
-Scenario: 既に休止中のコースを再度休止しようとする
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスが "Suspended" である
-  When SuspendCourseCommandを実行する
-    - CourseCode: "CS101"
-  Then InvalidOperationException がスローされる
-  And エラーメッセージに "Course is already suspended" が含まれる
-```
-
-```gherkin
-Scenario: アーカイブされたコースを休止しようとする
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And 現在のステータスが "Archived" である
-  When SuspendCourseCommandを実行する
-    - CourseCode: "CS101"
-  Then InvalidOperationException がスローされる
-  And エラーメッセージに "Cannot suspend archived course" が含まれる
-```
-
-**制約:**
-
-- ValidToは必須
-- ValidToは現在のステータスのValidFrom以降である必要がある
-- Suspended状態から再有効化（Activate）可能
-- ArchivedステータスからSuspendedへの変更は不可
-- 休止中のコースは新規履修登録不可
-- 既存の履修登録には影響しない
-
-**実装状態:** ⬜ 未実装
-
----
-
-### ⬜ US-CS04: コースのステータス履歴を取得できる
-
-**ストーリー:**
-管理者・教員として、コースのステータス変更履歴を確認できるようにしたい。なぜなら、コースの開講状況の変遷を把握し、監査や報告に利用する必要があるから。
-
-**Handler:** `GetCourseStatusHistoryQueryHandler : IRequestHandler<GetCourseStatusHistoryQuery, List<CourseStatusHistoryDto>>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: コースのステータス履歴を取得する
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And CourseStatusHistoryに以下のレコードが存在する
-    | Status    | ValidFrom  | ValidTo    | Reason          |
-    | Active    | 2023-04-01 | 2023-09-30 | 新規開講        |
-    | Suspended | 2023-10-01 | 2024-03-31 | 担当教員不在    |
-    | Active    | 2024-04-01 | null       | 再開            |
-  When GetCourseStatusHistoryQueryを実行する
-    - CourseCode: "CS101"
-  Then 3件のCourseStatusHistoryDtoが返される
-  And ValidFromの降順でソートされている（最新が先頭）
-  And 1件目のStatusが "Active" である
-  And 1件目のValidToが null である
-```
-
-```gherkin
-Scenario: ステータス履歴が存在しないコースの履歴を取得する
-  Given データベースにコースコード "CS101" のコースが登録されている
-  And CourseStatusHistoryにレコードが存在しない
-  When GetCourseStatusHistoryQueryを実行する
-    - CourseCode: "CS101"
-  Then 空のリストが返される
-```
-
-```gherkin
-Scenario: 存在しないコースコードで履歴を取得しようとする
-  Given データベースにコースコード "XXX999" のコースが存在しない
-  When GetCourseStatusHistoryQueryを実行する
-    - CourseCode: "XXX999"
-  Then KeyNotFoundException がスローされる
-  And エラーメッセージに "Course not found" が含まれる
-```
-
-**制約:**
-
-- デフォルトソート: ValidFromの降順（最新が先頭）
-- 全ての履歴を取得（ページネーション未実装）
-- 読み取り専用
-
-**実装状態:** ⬜ 未実装
-
----
-
-### ⬜ US-CS05: 指定日時点で有効なコース一覧を取得できる
-
-**ストーリー:**
-学生・教員として、指定した日付時点で履修登録可能なコース（有効なコース）の一覧を取得できるようにしたい。なぜなら、特定の学期や日付で開講されているコースのみを表示する必要があるから。
-
-**Handler:** `GetActiveCoursesByDateQueryHandler : IRequestHandler<GetActiveCoursesByDateQuery, List<CourseDto>>`
-
-**受け入れ条件:**
-
-```gherkin
-Scenario: 指定日時点で有効なコース一覧を取得する
-  Given データベースに以下のコースとステータス履歴が存在する
-    | CourseCode | Status    | ValidFrom  | ValidTo    |
-    | CS101      | Active    | 2024-04-01 | null       |
-    | MATH201    | Suspended | 2024-04-01 | null       |
-    | ENG101     | Active    | 2024-04-01 | 2024-09-30 |
-    | PHYS301    | Active    | 2024-10-01 | null       |
-  When GetActiveCoursesByDateQueryを実行する
-    - TargetDate: 2024-05-15
-  Then 2件のCourseDtoが返される
-  And "CS101" と "ENG101" のみが返される
-  And StatusがActiveでValidFrom <= 2024-05-15 <= ValidTo（またはnull）を満たす
-```
-
-```gherkin
-Scenario: 現在日時で有効なコース一覧を取得する（デフォルト）
-  Given データベースに複数のコースとステータス履歴が存在する
-  And 現在日時が 2024-05-15 である
-  When GetActiveCoursesByDateQueryを実行する
-    - TargetDate: 指定なし（null）
-  Then 現在日時（2024-05-15）時点でActiveなコースのみが返される
-```
-
-```gherkin
-Scenario: 指定日時点で有効なコースが存在しない場合
-  Given データベースにコースが存在する
-  And 全てのコースが 2024-06-01 以降にActiveである
-  When GetActiveCoursesByDateQueryを実行する
-    - TargetDate: 2024-05-15
-  Then 空のリストが返される
-```
-
-**制約:**
-
-- TargetDateが指定されない場合は現在日時を使用
-- Status = 'Active' のみを対象
-- ValidFrom <= TargetDate AND (ValidTo IS NULL OR ValidTo >= TargetDate)
-- コースの基本情報（コースコード、コース名、単位数、定員）を含む
-- デフォルトソート: コースコードの昇順
-
-**実装状態:** ⬜ 未実装
-
----
-
 ## エピック4: 履修登録
 
 ### ⬜ US-R01: コースを履修登録できる
@@ -960,16 +1019,19 @@ API利用者として、学生がコースを履修登録できるようにし�
 **受け入れ条件:**
 
 ```gherkin
-Scenario: 学生が有効なコースを履修登録する
+Scenario: 学生が有効なコース開講を履修登録する
   Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
-  And データベースにコースコード "CS101" のコースが登録されている
-  And 学生の現在の履修単位数が 12単位 である
-  And CS101 の単位数が 3単位 である
-  And データベースに 2024年度 Spring学期 が登録されている
-  When EnrollStudentCommandを実行する
-    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  And データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1
     - CourseCode: "CS101"
     - SemesterId: (2024, Spring)
+    - Credits: 3
+    - MaxCapacity: 30
+    - Status: Active
+  And 学生の現在の履修単位数が 12単位 である
+  When EnrollStudentCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - OfferingId: 1
   Then 履修登録ID（EnrollmentId）が返される
   And データベースに履修登録が保存されている
   And 履修登録ステータスが "InProgress" である
@@ -986,21 +1048,38 @@ Scenario: 履修単位数上限を超えて登録を試みる
 ```
 
 ```gherkin
-Scenario: 同じコースを重複して登録を試みる
-  Given 学生がコースコード "CS101" を2024年度 Spring学期で既に履修登録している
+Scenario: 同じコース開講を重複して登録を試みる
+  Given データベースにOfferingId 1 のCourseOfferingが存在する
+  And 学生がOfferingId 1 を既に履修登録している
   When EnrollStudentCommandを実行する
     - StudentId: （同じ学生ID）
-    - CourseCode: "CS101"
-    - SemesterId: (2024, Spring)
+    - OfferingId: 1
   Then InvalidOperationException がスローされる
   And エラーメッセージに "Already enrolled" が含まれる
 ```
 
 ```gherkin
-Scenario: 定員オーバーのコースを登録を試みる
-  Given コースコード "CS101" の定員が 30名 である
-  And 既に 30名 の学生が履修登録している
+Scenario: 同一年度内で同じコースを異なる学期に重複登録を試みる
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1, CourseCode: "CS101", SemesterId: (2024, Spring)
+    - OfferingId: 2, CourseCode: "CS101", SemesterId: (2024, Fall)
+  And 学生が2024年Spring学期のCS101 (OfferingId: 1) を既に履修登録している
+  When EnrollStudentCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - OfferingId: 2  # 同じ年度の別学期
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Course CS101 already enrolled in year 2024" が含まれる
+```
+
+```gherkin
+Scenario: 定員オーバーのコース開講を登録を試みる
+  Given データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1
+    - MaxCapacity: 30
+  And OfferingId 1 に既に 30名 の学生が履修登録している
   When 31人目の学生がEnrollStudentCommandを実行する
+    - OfferingId: 1
   Then InvalidOperationException がスローされる
   And エラーメッセージに "Course is full" が含まれる
 ```
@@ -1015,20 +1094,37 @@ Scenario: 存在しない学生IDで登録を試みる
 ```
 
 ```gherkin
-Scenario: 存在しないコースコードで登録を試みる
-  Given データベースにコースコード "XXX999" のコースが存在しない
+Scenario: 存在しないOfferingIdで登録を試みる
+  Given データベースにOfferingId 999 のCourseOfferingが存在しない
   When EnrollStudentCommandを実行する
-    - CourseCode: "XXX999"
+    - OfferingId: 999
   Then KeyNotFoundException がスローされる
-  And エラーメッセージに "Course not found" が含まれる
+  And エラーメッセージに "CourseOffering not found" が含まれる
+```
+
+```gherkin
+Scenario: 履修登録期限を過ぎて登録を試みる
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And データベースに以下のCourseOfferingが存在する
+    - OfferingId: 1, SemesterId: (2024, Spring)
+  And 2024年Spring学期の EnrollmentDeadline が 2024-04-15 である
+  And 現在日時が 2024-04-20 である
+  When EnrollStudentCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - OfferingId: 1
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Enrollment deadline has passed" が含まれる
 ```
 
 **制約:**
 
 - 最大履修単位数: 24単位/学期
-- 同じコース・同じ学期の重複登録は不可
+- 同じOfferingIdの重複登録は不可
+- 同じCourseCodeを同一年度内で複数回履修不可（例: 2024年SpringでCS101履修済み → 2024年FallでCS101は不可）
 - 定員オーバーは不可
-- 学期は事前にSemesterエンティティとして登録されている必要がある
+- CourseOfferingが事前に登録されている必要がある
+- CourseOfferingのStatusが"Active"である必要がある
+- 履修登録は学期の EnrollmentDeadline までに行う必要がある
 - 初期ステータス: InProgress
 
 **実装状態:** ⬜ 未実装
@@ -1075,11 +1171,25 @@ Scenario: 存在しない履修登録IDでキャンセルを試みる
   And エラーメッセージに "Enrollment not found" が含まれる
 ```
 
+```gherkin
+Scenario: キャンセル期限を過ぎてキャンセルを試みる
+  Given データベースに履修登録ID "abc-123" の履修登録が存在する
+  And 履修登録ステータスが "InProgress" である
+  And 履修登録の学期が (2024, Spring) である
+  And 2024年Spring学期の CancellationDeadline が 2024-05-15 である
+  And 現在日時が 2024-05-20 である
+  When CancelEnrollmentCommandを実行する
+    - EnrollmentId: "abc-123"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Cancellation deadline has passed" が含まれる
+```
+
 **制約:**
 
 - キャンセル可能なステータス: InProgress のみ
 - キャンセル後は履修単位数から減算
 - Completed または Cancelled ステータスはキャンセル不可
+- キャンセルは学期の CancellationDeadline までに行う必要がある
 
 **実装状態:** ⬜ 未実装
 
@@ -1098,10 +1208,10 @@ Scenario: 存在しない履修登録IDでキャンセルを試みる
 Scenario: 学生の全ての履修登録を取得する
   Given StudentRepositoryにStudentId "student-001" が存在する
   And EnrollmentRepositoryに以下のEnrollmentが存在する
-    | CourseCode | SemesterId      | Status     |
-    | CS101      | (2024, Spring)  | InProgress |
-    | MATH201    | (2024, Spring)  | InProgress |
-    | ENG101     | (2023, Fall)    | Completed  |
+    | OfferingId | CourseCode | SemesterId      | Status     |
+    | 1          | CS101      | (2024, Spring)  | InProgress |
+    | 2          | MATH201    | (2024, Spring)  | InProgress |
+    | 3          | ENG101     | (2023, Fall)    | Completed  |
   When GetStudentEnrollmentsQueryを実行する
     - StudentId: "student-001"
   Then 3件のEnrollmentDtoが返される
@@ -1200,12 +1310,12 @@ Scenario: 存在しない履修登録IDで完了を試みる
 
 ## ドメインルール・制約まとめ
 
-### コース（Course）
+### コースマスタ（Course）
 
 - **コースコード**: `^[A-Z]{2,4}\d{3,4}$`（例: CS101, MATH1001）
-- **単位数**: 1〜10
-- **定員**: 1以上
 - **コース名**: 必須、空白不可
+- **説明**: オプション
+- **注意**: 単位数(Credits)と定員(MaxCapacity)はコース開講(CourseOffering)で管理
 
 ### 学生（Student）
 
@@ -1215,51 +1325,75 @@ Scenario: 存在しない履修登録IDで完了を試みる
 
 ### 履修登録（Enrollment）
 
+- **エンティティ構造**:
+  - EnrollmentId: UUID（自動生成）
+  - StudentId: UUID（外部キー）
+  - OfferingId: INT（外部キー）
+  - SemesterId: 複合値オブジェクト（非正規化、検索・集計用）
+  - CourseCode: VARCHAR(10)（非正規化、重複チェック用）
+  - Credits: INT（非正規化、単位計算用）
+  - Status: ENUM（InProgress, Completed, Cancelled）
+- **非正規化の理由**:
+  - 学期ごとの履修単位数集計の効率化
+  - 同一コース重複チェックの高速化
+  - CourseOfferingがキャンセルされても履修履歴を保持
 - **最大履修単位数**: 24単位/学期
+- **単位数計算ルール**:
+  - 現在の履修単位数: 同一学期内で Status = InProgress の Credits 合計
+  - 累積取得単位数: 全学期で Status = Completed の Credits 合計
+  - Cancelled は計算から除外
 - **ステータス遷移**:
   - `InProgress` → `Completed` ✅
   - `InProgress` → `Cancelled` ✅
   - `Completed` → (変更不可) ❌
   - `Cancelled` → (変更不可) ❌
-- **重複登録**: 同じコース・同じ学期は不可
-- **定員チェック**: 定員オーバーは登録不可
+- **重複登録防止**:
+  - 同じOfferingIdは不可
+  - 同じCourseCodeを同一年度内で複数回履修不可（再履修ケースは別途検討）
+- **定員チェック**: CourseOfferingの定員オーバーは登録不可
+- **開講状態チェック**: CourseOfferingのStatusが"Active"である必要がある
+- **期限チェック**: Semesterの履修登録期限内のみ登録可能
 
 ### 学期（Semester）
 
 - **年度**: 2000〜2100
 - **学期**: Spring または Fall
 - **一意制約**: 年度 + 学期
-
-### コースステータス履歴（CourseStatusHistory）
-
-- **ステータス種別**: Active（有効）、Archived（アーカイブ）、Suspended（休止）
-- **ステータス遷移**:
-  - `null` → `Active` ✅（初回有効化）
-  - `Active` → `Archived` ✅
-  - `Active` → `Suspended` ✅
-  - `Suspended` → `Active` ✅（再有効化）
-  - `Suspended` → `Archived` ✅
-  - `Archived` → `Active` ✅（再開講）
-  - `Archived` → `Suspended` ❌（不可）
 - **期間管理**:
-  - ValidFrom（有効開始日）は必須
-  - ValidTo（有効終了日）がnullの場合、現在進行中のステータス
-  - 1つのコースにつき、ValidTo = nullのレコードは最大1件
-  - 新しいステータスを追加する際、直前のステータスのValidToを自動更新（ValidFrom - 1日）
-  - ValidFromは過去のステータスValidToの翌日以降
-  - ValidTo >= ValidFrom（終了日は開始日以降）
-- **理由（Reason）**: オプション、最大200文字
-- **履修登録への影響**: Active状態のコースのみ新規履修登録可能
+  - StartDate: 学期開始日
+  - EndDate: 学期終了日
+  - EnrollmentDeadline: 履修登録締切日（この日まで新規登録可能）
+  - CancellationDeadline: 履修キャンセル締切日（この日まで取消可能）
+- **制約**: StartDate < EnrollmentDeadline < CancellationDeadline < EndDate
+
+### コース開講（CourseOffering）
+
+- **OfferingId**: INT（自動生成、主キー）
+- **CourseCode + SemesterId**: 一意制約（同一学期に同じコースは1回のみ開講可能）
+- **単位数（Credits）**: 1〜10
+- **定員（MaxCapacity）**: 1以上
+- **教員（Instructor）**: オプション、最大100文字
+- **ステータス種別**: Active（開講中）、Cancelled（キャンセル済み）
+- **ステータス遷移**:
+  - 初期状態: `Active`（デフォルト）
+  - `Active` → `Cancelled` ✅
+  - `Cancelled` → `Active` ❌（再有効化不可、新規開講として作成）
+- **履修登録への影響**:
+  - Active状態のCourseOfferingのみ新規履修登録可能
+  - 履修登録者が1名でもいる場合はキャンセル不可
+- **一括コピー機能**:
+  - Statusが"Cancelled"のCourseOfferingはコピー対象外
+  - 既に同じCourseCodeの開講が存在する場合はスキップ
 
 ---
 
 ## 実装優先順位
 
-### Phase 1: 基本機能（完了済み）
+### Phase 1: コースマスタ管理（完了済み）
 
-- ✅ US-E01: コース登録
-- ✅ US-E02: コース一覧閲覧
-- ✅ US-E03: コース検索
+- ✅ US-E01: コースマスタ登録
+- ✅ US-E02: コースマスタ一覧閲覧
+- ✅ US-E03: コースマスタ検索
 
 ### Phase 2: 学生管理（完了）
 
@@ -1273,22 +1407,22 @@ Scenario: 存在しない履修登録IDで完了を試みる
 - ✅ US-M02: 学期一覧取得
 - ✅ US-M03: 現在の学期取得
 
-### Phase 3.5: コースステータス管理（次フェーズ）
+### Phase 3.5: コース開講管理（次フェーズ）
 
-**優先順位1: 既存機能との統合**
+**優先順位1: コア開講管理機能**
 
-- ⬜ US-CS00: コース登録時にActiveステータス自動作成（CreateCourseCommandHandler修正）
+- ⬜ US-CO01: コース開講を登録
+- ⬜ US-CO02: コース開講情報を更新
+- ⬜ US-CO05: コース開講をキャンセル
 
-**優先順位2: コアステータス管理機能**
+**優先順位2: クエリ機能**
 
-- ⬜ US-CS01: コースを有効化
-- ⬜ US-CS02: コースをアーカイブ
-- ⬜ US-CS03: コースを休止
+- ⬜ US-CO03: 学期ごとのコース開講一覧を取得
+- ⬜ US-CO04: コース開講詳細を取得
 
-**優先順位3: クエリ機能**
+**優先順位3: 効率化機能**
 
-- ⬜ US-CS04: コースのステータス履歴を取得
-- ⬜ US-CS05: 指定日時点で有効なコース一覧を取得
+- ⬜ US-CO06: 前学期のコース開講情報を一括コピー
 
 ### Phase 4: 履修登録コア機能
 
