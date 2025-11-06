@@ -36,15 +36,15 @@
 | GetCoursesQueryHandler | GetCoursesQuery | コースマスタ一覧を取得 | ✅ 完了 |
 | GetCourseByCodeQueryHandler | GetCourseByCodeQuery | コースマスタを取得 | ✅ 完了 |
 
-### コース開講管理 (Phase 4 - 未実装) → エピック4
+### コース開講管理 (Phase 4) → エピック4
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
-| CreateCourseOfferingCommandHandler | CreateCourseOfferingCommand | コース開講を登録 | ⬜ 未実装 |
-| UpdateCourseOfferingCommandHandler | UpdateCourseOfferingCommand | コース開講情報を更新 | ⬜ 未実装 |
-| GetCourseOfferingsBySemesterQueryHandler | GetCourseOfferingsBySemesterQuery | 学期ごとのコース開講一覧を取得 | ⬜ 未実装 |
-| GetCourseOfferingQueryHandler | GetCourseOfferingQuery | コース開講詳細を取得 | ⬜ 未実装 |
-| CancelCourseOfferingCommandHandler | CancelCourseOfferingCommand | コース開講をキャンセル | ⬜ 未実装 |
+| CreateCourseOfferingCommandHandler | CreateCourseOfferingCommand | コース開講を登録 | ✅ 完了 |
+| UpdateCourseOfferingCommandHandler | UpdateCourseOfferingCommand | コース開講情報を更新 | ✅ 完了 |
+| GetCourseOfferingsBySemesterQueryHandler | GetCourseOfferingsBySemesterQuery | 学期ごとのコース開講一覧を取得 | ✅ 完了 |
+| GetCourseOfferingQueryHandler | GetCourseOfferingQuery | コース開講詳細を取得 | ✅ 完了 |
+| CancelCourseOfferingCommandHandler | CancelCourseOfferingCommand | コース開講をキャンセル | ✅ 完了 |
 | CopyCourseOfferingsFromPreviousSemesterCommandHandler | CopyCourseOfferingsFromPreviousSemesterCommand | 前学期のコース開講情報を一括コピー | ⬜ 未実装 |
 
 ### 履修登録 (Phase 5 - 未実装) → エピック5
