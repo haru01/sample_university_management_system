@@ -44,7 +44,11 @@ public class GetCoursesQueryHandler : IRequestHandler<GetCoursesQuery, List<Cour
 - Command/Queryは`IRequest<TResponse>`を実装
 - 各Handlerは`IRequestHandler<TRequest, TResponse>`を実装
 - コントローラはMediatorを通じてHandlerを呼び出す（Handlerの具体実装を知る必要がない）
-- 命名規則: `{Command/Query}Handler` (例: `CreateCourseCommandHandler`, `GetCoursesQueryHandler`)
+- 命名規則:
+  - Handler: `{Command/Query}Handler` (例: `CreateCourseCommandHandler`, `SelectCoursesQueryHandler`)
+  - Query:
+    - 単一エンティティ取得: `Get*Query` (例: `GetCourseQuery`, `GetCourseOfferingQuery`)
+    - 複数エンティティ取得: `Select*Query` (例: `SelectCoursesQuery`, `SelectCourseOfferingsBySemesterQuery`)
 
 ---
 

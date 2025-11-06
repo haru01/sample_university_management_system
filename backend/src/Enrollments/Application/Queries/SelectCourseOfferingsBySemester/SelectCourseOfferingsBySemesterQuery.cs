@@ -1,9 +1,9 @@
 using Enrollments.Application.Queries.CourseOfferings;
 using MediatR;
 
-namespace Enrollments.Application.Queries.GetCourseOfferingsBySemester;
+namespace Enrollments.Application.Queries.SelectCourseOfferingsBySemester;
 
-public record GetCourseOfferingsBySemesterQuery : IRequest<List<CourseOfferingDto>>
+public record SelectCourseOfferingsBySemesterQuery : IRequest<List<CourseOfferingDto>>
 {
     public required int Year { get; init; }
     public required string Period { get; init; }

@@ -4,18 +4,18 @@ using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.SemesterAggregate;
 using MediatR;
 
-namespace Enrollments.Application.Queries.GetCourseOfferingsBySemester;
+namespace Enrollments.Application.Queries.SelectCourseOfferingsBySemester;
 
 /// <summary>
 /// 学期ごとのコース開講一覧取得クエリハンドラー
 /// </summary>
-public class GetCourseOfferingsBySemesterQueryHandler
-    : IRequestHandler<GetCourseOfferingsBySemesterQuery, List<CourseOfferingDto>>
+public class SelectCourseOfferingsBySemesterQueryHandler
+    : IRequestHandler<SelectCourseOfferingsBySemesterQuery, List<CourseOfferingDto>>
 {
     private readonly ICourseOfferingRepository _courseOfferingRepository;
     private readonly ICourseRepository _courseRepository;
 
-    public GetCourseOfferingsBySemesterQueryHandler(
+    public SelectCourseOfferingsBySemesterQueryHandler(
         ICourseOfferingRepository courseOfferingRepository,
         ICourseRepository courseRepository)
     {
@@ -24,7 +24,7 @@ public class GetCourseOfferingsBySemesterQueryHandler
     }
 
     public async Task<List<CourseOfferingDto>> Handle(
-        GetCourseOfferingsBySemesterQuery request,
+        SelectCourseOfferingsBySemesterQuery request,
         CancellationToken cancellationToken)
     {
         // SemesterIdを構築

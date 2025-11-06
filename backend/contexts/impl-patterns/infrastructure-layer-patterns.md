@@ -224,6 +224,9 @@ public class EnrollmentRepository : IEnrollmentRepository
 - **シンプルな取得メソッドのみ**: 複雑なクエリはQueryHandlerで実装
 - **集約全体を取得**: 必要なら `Include()` で関連エンティティも取得
 - **IQueryable は返さない**: リポジトリ外にクエリロジックが漏れるのを防ぐ
+- **命名規約**:
+  - 単一エンティティ取得: `Get*Async` (例: `GetByIdAsync`, `GetByCodeAsync`)
+  - 複数エンティティ取得: `Select*Async` (例: `SelectBySemesterAsync`, `SelectByStatusAsync`)
 
 ---
 

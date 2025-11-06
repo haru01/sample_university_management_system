@@ -42,7 +42,7 @@
 |---------|--------------|------|----------|
 | CreateCourseOfferingCommandHandler | CreateCourseOfferingCommand | コース開講を登録 | ✅ 完了 |
 | UpdateCourseOfferingCommandHandler | UpdateCourseOfferingCommand | コース開講情報を更新 | ✅ 完了 |
-| GetCourseOfferingsBySemesterQueryHandler | GetCourseOfferingsBySemesterQuery | 学期ごとのコース開講一覧を取得 | ✅ 完了 |
+| SelectCourseOfferingsBySemesterQueryHandler | SelectCourseOfferingsBySemesterQuery | 学期ごとのコース開講一覧を取得 | ✅ 完了 |
 | GetCourseOfferingQueryHandler | GetCourseOfferingQuery | コース開講詳細を取得 | ✅ 完了 |
 | CancelCourseOfferingCommandHandler | CancelCourseOfferingCommand | コース開講をキャンセル | ✅ 完了 |
 | CopyCourseOfferingsFromPreviousSemesterCommandHandler | CopyCourseOfferingsFromPreviousSemesterCommand | 前学期のコース開講情報を一括コピー | ⬜ 未実装 |
@@ -547,7 +547,7 @@ Scenario: コースマスタが1件も登録されていない場合
 
 - 全てのコースマスタを取得（ページネーション未実装）
 - コース情報は読み取り専用
-- **Phase 3.5実装後の注意**: 実際の開講情報(単位数、定員、教員)は `GetCourseOfferingsBySemesterQuery` (US-CO03) で取得すること
+- **Phase 3.5実装後の注意**: 実際の開講情報(単位数、定員、教員)は `SelectCourseOfferingsBySemesterQuery` (US-CO03) で取得すること
 
 **実装状態:** ✅ 完了
 
@@ -734,7 +734,7 @@ Scenario: キャンセル済みのコース開講を更新しようとする
 **ストーリー:**
 API利用者として、特定の学期に開講されているコース一覧を取得できるようにしたい。なぜなら、学生が履修登録可能なコースを確認する必要があるから。
 
-**Handler:** `GetCourseOfferingsBySemesterQueryHandler : IRequestHandler<GetCourseOfferingsBySemesterQuery, List<CourseOfferingDto>>`
+**Handler:** `SelectCourseOfferingsBySemesterQueryHandler : IRequestHandler<SelectCourseOfferingsBySemesterQuery, List<CourseOfferingDto>>`
 
 **受け入れ条件:**
 
@@ -747,7 +747,7 @@ Scenario: 特定学期の全コース開講を取得する
     | CourseCode | Credits | MaxCapacity | Instructor | Status |
     | CS101      | 3       | 30          | 田中教授   | Active |
     | MATH201    | 4       | 25          | 鈴木教授   | Active |
-  When GetCourseOfferingsBySemesterQueryを実行する
+  When SelectCourseOfferingsBySemesterQueryを実行する
     - SemesterId: (2024, Spring)
   Then 2件のCourseOfferingDtoが返される
   And 1件目のコースコードが "CS101" である
@@ -763,7 +763,7 @@ Scenario: Activeステータスのみをフィルタリングして取得する
     | CS101      | Active    |
     | MATH201    | Cancelled |
     | ENG101     | Active    |
-  When GetCourseOfferingsBySemesterQueryを実行する
+  When SelectCourseOfferingsBySemesterQueryを実行する
     - SemesterId: (2024, Spring)
     - StatusFilter: Active
   Then 2件のCourseOfferingDtoが返される
@@ -774,7 +774,7 @@ Scenario: Activeステータスのみをフィルタリングして取得する
 Scenario: 開講が1件も登録されていない学期
   Given データベースに学期 (2024, Fall) が登録されている
   And 学期 (2024, Fall) にCourseOfferingが存在しない
-  When GetCourseOfferingsBySemesterQueryを実行する
+  When SelectCourseOfferingsBySemesterQueryを実行する
     - SemesterId: (2024, Fall)
   Then 空のリスト（0件）が返される
 ```
@@ -785,7 +785,7 @@ Scenario: 開講が1件も登録されていない学期
 - CourseOfferingDtoにはコースマスタ情報（Name, Description）も含める
 - ページネーション未実装
 
-**実装状態:** ⬜ 未実装
+**実装状態:** ✅ 完了
 
 ---
 

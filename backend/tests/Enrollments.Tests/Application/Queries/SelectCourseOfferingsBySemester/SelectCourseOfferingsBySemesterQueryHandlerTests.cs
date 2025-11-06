@@ -1,20 +1,20 @@
-using Enrollments.Application.Queries.GetCourseOfferingsBySemester;
+using Enrollments.Application.Queries.SelectCourseOfferingsBySemester;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
 using Microsoft.EntityFrameworkCore;
 
-namespace Enrollments.Tests.Application.Queries.GetCourseOfferingsBySemester;
+namespace Enrollments.Tests.Application.Queries.SelectCourseOfferingsBySemester;
 
 /// <summary>
-/// GetCourseOfferingsBySemesterQueryHandlerのテスト
+/// SelectCourseOfferingsBySemesterQueryHandlerのテスト
 /// </summary>
-public class GetCourseOfferingsBySemesterQueryHandlerTests : IDisposable
+public class SelectCourseOfferingsBySemesterQueryHandlerTests : IDisposable
 {
     private readonly CoursesDbContext _context;
-    private readonly GetCourseOfferingsBySemesterQueryHandler _handler;
+    private readonly SelectCourseOfferingsBySemesterQueryHandler _handler;
 
-    public GetCourseOfferingsBySemesterQueryHandlerTests()
+    public SelectCourseOfferingsBySemesterQueryHandlerTests()
     {
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -24,7 +24,7 @@ public class GetCourseOfferingsBySemesterQueryHandlerTests : IDisposable
 
         var courseOfferingRepository = new CourseOfferingRepository(_context);
         var courseRepository = new CourseRepository(_context);
-        _handler = new GetCourseOfferingsBySemesterQueryHandler(
+        _handler = new SelectCourseOfferingsBySemesterQueryHandler(
             courseOfferingRepository,
             courseRepository);
     }
@@ -69,7 +69,7 @@ public class GetCourseOfferingsBySemesterQueryHandlerTests : IDisposable
         await _context.CourseOfferings.AddAsync(offering2);
         await _context.SaveChangesAsync();
 
-        var query = new GetCourseOfferingsBySemesterQuery
+        var query = new SelectCourseOfferingsBySemesterQuery
         {
             Year = 2024,
             Period = "Spring"
@@ -126,7 +126,7 @@ public class GetCourseOfferingsBySemesterQueryHandlerTests : IDisposable
         await _context.CourseOfferings.AddAsync(offering3);
         await _context.SaveChangesAsync();
 
-        var query = new GetCourseOfferingsBySemesterQuery
+        var query = new SelectCourseOfferingsBySemesterQuery
         {
             Year = 2024,
             Period = "Spring",
@@ -148,7 +148,7 @@ public class GetCourseOfferingsBySemesterQueryHandlerTests : IDisposable
     public async Task 開講が1件も登録されていない学期で空のリストが返される()
     {
         // Arrange
-        var query = new GetCourseOfferingsBySemesterQuery
+        var query = new SelectCourseOfferingsBySemesterQuery
         {
             Year = 2024,
             Period = "Fall"
@@ -184,7 +184,7 @@ public class GetCourseOfferingsBySemesterQueryHandlerTests : IDisposable
         await _context.CourseOfferings.AddAsync(offering2);
         await _context.SaveChangesAsync();
 
-        var query = new GetCourseOfferingsBySemesterQuery
+        var query = new SelectCourseOfferingsBySemesterQuery
         {
             Year = 2024,
             Period = "Spring"
