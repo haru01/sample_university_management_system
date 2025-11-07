@@ -74,11 +74,14 @@ public class CourseOfferingRepository : ICourseOfferingRepository
 
     public async Task<OfferingId> GetNextOfferingIdAsync(CancellationToken cancellationToken = default)
     {
-        var maxId = await _context.CourseOfferings
+        var offerings = await _context.CourseOfferings
             .AsNoTracking()
-            .Select(co => (int?)co.Id.Value)
-            .MaxAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        return new OfferingId((maxId ?? 0) + 1);
+        var maxId = offerings.Count > 0
+            ? offerings.Max(co => co.Id.Value)
+            : 0;
+
+        return new OfferingId(maxId + 1);
     }
 }

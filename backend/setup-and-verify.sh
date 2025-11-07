@@ -299,6 +299,160 @@ fi
 echo ""
 
 # ========================================
+# CourseOffering関連のテスト
+# ========================================
+echo -e "${YELLOW}=== CourseOffering API Tests ===${NC}"
+echo ""
+
+# CourseOffering作成テスト
+echo -e "${CYAN}[12] POST /api/courseofferings (コース開講を作成)${NC}"
+offering_create_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/courseofferings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "courseCode": "CS101",
+    "year": 2024,
+    "period": "Spring",
+    "credits": 3,
+    "maxCapacity": 30,
+    "instructor": "田中教授"
+  }')
+
+offering_create_status=$(echo "$offering_create_response" | tail -n 1)
+offering_create_body=$(echo "$offering_create_response" | sed '$d')
+
+if [ "$offering_create_status" = "201" ] || [ "$offering_create_status" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $offering_create_status - CourseOfferingを作成しました${NC}"
+    offering_id=$(echo "$offering_create_body" | jq -r '.offeringId' 2>/dev/null)
+    if [ -n "$offering_id" ] && [ "$offering_id" != "null" ]; then
+        echo "Offering ID: $offering_id"
+    fi
+else
+    echo -e "${YELLOW}⚠ HTTP $offering_create_status${NC}"
+    echo "$offering_create_body"
+fi
+echo ""
+
+# 追加のCourseOffering作成（複数件テスト用）
+echo -e "${CYAN}[13] POST /api/courseofferings (追加のコース開講を作成)${NC}"
+offering_create_response2=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/courseofferings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "courseCode": "CS101",
+    "year": 2024,
+    "period": "Spring",
+    "credits": 4,
+    "maxCapacity": 25,
+    "instructor": "鈴木教授"
+  }')
+
+offering_create_status2=$(echo "$offering_create_response2" | tail -n 1)
+offering_create_body2=$(echo "$offering_create_response2" | sed '$d')
+
+if [ "$offering_create_status2" = "201" ] || [ "$offering_create_status2" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $offering_create_status2 - 追加のCourseOfferingを作成しました${NC}"
+    offering_id2=$(echo "$offering_create_body2" | jq -r '.offeringId' 2>/dev/null)
+    if [ -n "$offering_id2" ] && [ "$offering_id2" != "null" ]; then
+        echo "Offering ID: $offering_id2"
+    fi
+else
+    echo -e "${YELLOW}⚠ HTTP $offering_create_status2${NC}"
+fi
+echo ""
+
+# 学期ごとのCourseOffering一覧取得テスト
+echo -e "${CYAN}[14] GET /api/courseofferings?year=2024&period=Spring (学期ごとの開講一覧を取得)${NC}"
+offerings_response=$(curl -s -w "\n%{http_code}" "http://localhost:8080/api/courseofferings?year=2024&period=Spring")
+offerings_status=$(echo "$offerings_response" | tail -n 1)
+offerings_body=$(echo "$offerings_response" | sed '$d')
+
+if [ "$offerings_status" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $offerings_status${NC}"
+    offerings_count=$(echo "$offerings_body" | jq 'length' 2>/dev/null)
+    if [ -n "$offerings_count" ]; then
+        echo "取得件数: $offerings_count 件"
+    fi
+    echo "$offerings_body" | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ HTTP $offerings_status${NC}"
+fi
+echo ""
+
+# 特定のCourseOffering取得テスト
+if [ -n "$offering_id" ] && [ "$offering_id" != "null" ]; then
+    echo -e "${CYAN}[15] GET /api/courseofferings/{id} (作成したCourseOfferingを取得)${NC}"
+    get_offering_response=$(curl -s -w "\n%{http_code}" http://localhost:8080/api/courseofferings/$offering_id)
+    get_offering_status=$(echo "$get_offering_response" | tail -n 1)
+
+    if [ "$get_offering_status" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $get_offering_status${NC}"
+        echo "$get_offering_response" | sed '$d' | jq '.' 2>/dev/null
+    else
+        echo -e "${RED}✗ HTTP $get_offering_status${NC}"
+    fi
+    echo ""
+
+    # CourseOffering更新テスト
+    echo -e "${CYAN}[16] PUT /api/courseofferings/{id} (CourseOffering情報を更新)${NC}"
+    update_offering_response=$(curl -s -w "\n%{http_code}" -X PUT http://localhost:8080/api/courseofferings/$offering_id \
+      -H "Content-Type: application/json" \
+      -d '{
+        "credits": 4,
+        "maxCapacity": 35,
+        "instructor": "田中教授（更新）"
+      }')
+
+    update_offering_status=$(echo "$update_offering_response" | tail -n 1)
+
+    if [ "$update_offering_status" = "200" ] || [ "$update_offering_status" = "204" ]; then
+        echo -e "${GREEN}✓ HTTP $update_offering_status - CourseOffering情報を更新しました${NC}"
+    else
+        echo -e "${RED}✗ HTTP $update_offering_status${NC}"
+    fi
+    echo ""
+
+    # 更新後のCourseOffering取得テスト
+    echo -e "${CYAN}[17] GET /api/courseofferings/{id} (更新後のCourseOfferingを確認)${NC}"
+    get_offering_updated_response=$(curl -s -w "\n%{http_code}" http://localhost:8080/api/courseofferings/$offering_id)
+    get_offering_updated_status=$(echo "$get_offering_updated_response" | tail -n 1)
+
+    if [ "$get_offering_updated_status" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $get_offering_updated_status${NC}"
+        get_offering_updated_body=$(echo "$get_offering_updated_response" | sed '$d')
+        echo "$get_offering_updated_body" | jq '.' 2>/dev/null
+
+        # 更新内容の検証
+        updated_credits=$(echo "$get_offering_updated_body" | jq -r '.credits' 2>/dev/null)
+        updated_max_capacity=$(echo "$get_offering_updated_body" | jq -r '.maxCapacity' 2>/dev/null)
+
+        if [ "$updated_credits" = "4" ] && [ "$updated_max_capacity" = "35" ]; then
+            echo -e "${GREEN}   ✓ 更新が正しく反映されています${NC}"
+        else
+            echo -e "${YELLOW}   ⚠ 更新内容に差異があります${NC}"
+        fi
+    else
+        echo -e "${RED}✗ HTTP $get_offering_updated_status${NC}"
+    fi
+    echo ""
+fi
+
+# Activeステータスでフィルタリングテスト
+echo -e "${CYAN}[18] GET /api/courseofferings?year=2024&period=Spring&statusFilter=Active (Activeのみ取得)${NC}"
+active_offerings_response=$(curl -s -w "\n%{http_code}" "http://localhost:8080/api/courseofferings?year=2024&period=Spring&statusFilter=Active")
+active_offerings_status=$(echo "$active_offerings_response" | tail -n 1)
+active_offerings_body=$(echo "$active_offerings_response" | sed '$d')
+
+if [ "$active_offerings_status" = "200" ]; then
+    echo -e "${GREEN}✓ HTTP $active_offerings_status${NC}"
+    active_count=$(echo "$active_offerings_body" | jq 'length' 2>/dev/null)
+    if [ -n "$active_count" ]; then
+        echo "Active件数: $active_count 件"
+    fi
+else
+    echo -e "${RED}✗ HTTP $active_offerings_status${NC}"
+fi
+echo ""
+
+# ========================================
 # 完了サマリー
 # ========================================
 echo -e "${BLUE}"
