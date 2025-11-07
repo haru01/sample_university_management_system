@@ -78,7 +78,7 @@ public class CreateCourseOfferingCommandHandlerTests : IDisposable
         Assert.Equal(3, savedOffering.Credits);
         Assert.Equal(30, savedOffering.MaxCapacity);
         Assert.Equal("田中教授", savedOffering.Instructor);
-        Assert.Equal(Domain.CourseOfferingAggregate.OfferingStatus.Active, savedOffering.Status);
+        Assert.Equal(Enrollments.Domain.CourseOfferingAggregate.OfferingStatus.Active, savedOffering.Status);
     }
 
     [Fact]

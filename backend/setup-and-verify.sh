@@ -453,6 +453,220 @@ fi
 echo ""
 
 # ========================================
+# Enrollment関連のテスト
+# ========================================
+echo -e "${YELLOW}=== Enrollment API Tests ===${NC}"
+echo ""
+
+# 履修登録の前提: Student IDとOffering IDを取得
+# StudentとOfferingが作成済みであることを前提とする
+enrollment_student_id="$student_id"
+enrollment_offering_id="$offering_id"
+
+if [ -n "$enrollment_student_id" ] && [ "$enrollment_student_id" != "null" ] && \
+   [ -n "$enrollment_offering_id" ] && [ "$enrollment_offering_id" != "null" ]; then
+
+    # 履修登録作成テスト
+    echo -e "${CYAN}[19] POST /api/enrollments (履修登録を作成)${NC}"
+    enrollment_create_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/enrollments \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"studentId\": \"$enrollment_student_id\",
+        \"offeringId\": $enrollment_offering_id,
+        \"enrolledBy\": \"student-$enrollment_student_id\",
+        \"initialNote\": \"必修科目のため履修\"
+      }")
+
+    enrollment_create_status=$(echo "$enrollment_create_response" | tail -n 1)
+    enrollment_create_body=$(echo "$enrollment_create_response" | sed '$d')
+
+    if [ "$enrollment_create_status" = "201" ] || [ "$enrollment_create_status" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $enrollment_create_status - 履修登録を作成しました${NC}"
+        enrollment_id=$(echo "$enrollment_create_body" | jq -r '.enrollmentId' 2>/dev/null)
+        if [ -n "$enrollment_id" ] && [ "$enrollment_id" != "null" ]; then
+            echo "Enrollment ID: $enrollment_id"
+        fi
+        echo "$enrollment_create_body" | jq '.' 2>/dev/null
+    else
+        echo -e "${YELLOW}⚠ HTTP $enrollment_create_status${NC}"
+        echo "$enrollment_create_body"
+    fi
+    echo ""
+
+    # 学生の履修登録一覧取得テスト
+    echo -e "${CYAN}[20] GET /api/enrollments/students/{studentId} (学生の履修登録一覧を取得)${NC}"
+    get_enrollments_response=$(curl -s -w "\n%{http_code}" http://localhost:8080/api/enrollments/students/$enrollment_student_id)
+    get_enrollments_status=$(echo "$get_enrollments_response" | tail -n 1)
+    get_enrollments_body=$(echo "$get_enrollments_response" | sed '$d')
+
+    if [ "$get_enrollments_status" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $get_enrollments_status${NC}"
+        enrollments_count=$(echo "$get_enrollments_body" | jq 'length' 2>/dev/null)
+        if [ -n "$enrollments_count" ]; then
+            echo "履修登録件数: $enrollments_count 件"
+        fi
+        echo "$get_enrollments_body" | jq '.' 2>/dev/null
+    else
+        echo -e "${RED}✗ HTTP $get_enrollments_status${NC}"
+    fi
+    echo ""
+
+    # Enrolledステータスでフィルタリングテスト
+    echo -e "${CYAN}[21] GET /api/enrollments/students/{studentId}?statusFilter=Enrolled (Enrolledのみ取得)${NC}"
+    enrolled_only_response=$(curl -s -w "\n%{http_code}" "http://localhost:8080/api/enrollments/students/$enrollment_student_id?statusFilter=Enrolled")
+    enrolled_only_status=$(echo "$enrolled_only_response" | tail -n 1)
+    enrolled_only_body=$(echo "$enrolled_only_response" | sed '$d')
+
+    if [ "$enrolled_only_status" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $enrolled_only_status${NC}"
+        enrolled_count=$(echo "$enrolled_only_body" | jq 'length' 2>/dev/null)
+        if [ -n "$enrolled_count" ]; then
+            echo "Enrolled件数: $enrolled_count 件"
+        fi
+    else
+        echo -e "${RED}✗ HTTP $enrolled_only_status${NC}"
+    fi
+    echo ""
+
+    # 2つ目の履修登録を作成（キャンセル・完了テスト用）
+    if [ -n "$offering_id2" ] && [ "$offering_id2" != "null" ]; then
+        echo -e "${CYAN}[22] POST /api/enrollments (追加の履修登録を作成 - テスト用)${NC}"
+        enrollment_create_response2=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/enrollments \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"studentId\": \"$enrollment_student_id\",
+            \"offeringId\": $offering_id2,
+            \"enrolledBy\": \"student-$enrollment_student_id\"
+          }")
+
+        enrollment_create_status2=$(echo "$enrollment_create_response2" | tail -n 1)
+        enrollment_create_body2=$(echo "$enrollment_create_response2" | sed '$d')
+
+        if [ "$enrollment_create_status2" = "201" ] || [ "$enrollment_create_status2" = "200" ]; then
+            echo -e "${GREEN}✓ HTTP $enrollment_create_status2 - 追加の履修登録を作成しました${NC}"
+            enrollment_id2=$(echo "$enrollment_create_body2" | jq -r '.enrollmentId' 2>/dev/null)
+            if [ -n "$enrollment_id2" ] && [ "$enrollment_id2" != "null" ]; then
+                echo "Enrollment ID: $enrollment_id2"
+            fi
+        else
+            echo -e "${YELLOW}⚠ HTTP $enrollment_create_status2${NC}"
+        fi
+        echo ""
+
+        # 履修登録完了テスト
+        if [ -n "$enrollment_id2" ] && [ "$enrollment_id2" != "null" ]; then
+            echo -e "${CYAN}[23] POST /api/enrollments/{enrollmentId}/complete (履修登録を完了)${NC}"
+            complete_enrollment_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/enrollments/$enrollment_id2/complete \
+              -H "Content-Type: application/json" \
+              -d '{
+                "completedBy": "system-grade-processor",
+                "reason": "学期終了による自動完了"
+              }')
+
+            complete_enrollment_status=$(echo "$complete_enrollment_response" | tail -n 1)
+
+            if [ "$complete_enrollment_status" = "200" ] || [ "$complete_enrollment_status" = "204" ]; then
+                echo -e "${GREEN}✓ HTTP $complete_enrollment_status - 履修登録を完了しました${NC}"
+            else
+                echo -e "${RED}✗ HTTP $complete_enrollment_status${NC}"
+            fi
+            echo ""
+        fi
+    fi
+
+    # 履修登録キャンセルテスト（元の履修登録をキャンセル）
+    if [ -n "$enrollment_id" ] && [ "$enrollment_id" != "null" ]; then
+        echo -e "${CYAN}[24] POST /api/enrollments/{enrollmentId}/cancel (履修登録をキャンセル)${NC}"
+        cancel_enrollment_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/enrollments/$enrollment_id/cancel \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"cancelledBy\": \"student-$enrollment_student_id\",
+            \"reason\": \"履修計画の変更のため\"
+          }")
+
+        cancel_enrollment_status=$(echo "$cancel_enrollment_response" | tail -n 1)
+
+        if [ "$cancel_enrollment_status" = "200" ] || [ "$cancel_enrollment_status" = "204" ]; then
+            echo -e "${GREEN}✓ HTTP $cancel_enrollment_status - 履修登録をキャンセルしました${NC}"
+        else
+            echo -e "${RED}✗ HTTP $cancel_enrollment_status${NC}"
+        fi
+        echo ""
+
+        # キャンセル後の履修登録一覧確認
+        echo -e "${CYAN}[25] GET /api/enrollments/students/{studentId} (キャンセル後の履修登録一覧を確認)${NC}"
+        after_cancel_response=$(curl -s -w "\n%{http_code}" http://localhost:8080/api/enrollments/students/$enrollment_student_id)
+        after_cancel_status=$(echo "$after_cancel_response" | tail -n 1)
+        after_cancel_body=$(echo "$after_cancel_response" | sed '$d')
+
+        if [ "$after_cancel_status" = "200" ]; then
+            echo -e "${GREEN}✓ HTTP $after_cancel_status${NC}"
+
+            # Cancelled件数をカウント
+            cancelled_count=$(echo "$after_cancel_body" | jq '[.[] | select(.status == "Cancelled")] | length' 2>/dev/null)
+            completed_count=$(echo "$after_cancel_body" | jq '[.[] | select(.status == "Completed")] | length' 2>/dev/null)
+
+            if [ -n "$cancelled_count" ]; then
+                echo "Cancelled件数: $cancelled_count 件"
+            fi
+            if [ -n "$completed_count" ]; then
+                echo "Completed件数: $completed_count 件"
+            fi
+
+            echo "$after_cancel_body" | jq '.' 2>/dev/null
+        else
+            echo -e "${RED}✗ HTTP $after_cancel_status${NC}"
+        fi
+        echo ""
+    fi
+
+    # 重複登録エラーテスト（新しくenrollmentを作成してから重複をテスト）
+    echo -e "${CYAN}[26] POST /api/enrollments (新しい履修登録を作成)${NC}"
+    new_enrollment_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/enrollments \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"studentId\": \"$enrollment_student_id\",
+        \"offeringId\": $enrollment_offering_id,
+        \"enrolledBy\": \"student-$enrollment_student_id\",
+        \"initialNote\": \"重複テスト用の新しい登録\"
+      }")
+
+    new_enrollment_status=$(echo "$new_enrollment_response" | tail -n 1)
+
+    if [ "$new_enrollment_status" = "201" ] || [ "$new_enrollment_status" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $new_enrollment_status - 新しい履修登録を作成しました${NC}"
+
+        # 重複登録エラーテスト
+        echo ""
+        echo -e "${CYAN}[27] POST /api/enrollments (重複登録エラーテスト)${NC}"
+        duplicate_enrollment_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/enrollments \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"studentId\": \"$enrollment_student_id\",
+            \"offeringId\": $enrollment_offering_id,
+            \"enrolledBy\": \"student-$enrollment_student_id\"
+          }")
+
+        duplicate_enrollment_status=$(echo "$duplicate_enrollment_response" | tail -n 1)
+
+        if [ "$duplicate_enrollment_status" = "409" ]; then
+            echo -e "${GREEN}✓ HTTP $duplicate_enrollment_status - 期待通り重複エラーが返されました${NC}"
+        elif [ "$duplicate_enrollment_status" = "201" ] || [ "$duplicate_enrollment_status" = "200" ]; then
+            echo -e "${YELLOW}⚠ HTTP $duplicate_enrollment_status - 重複チェックが機能していない可能性があります${NC}"
+        else
+            echo -e "${YELLOW}⚠ HTTP $duplicate_enrollment_status${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠ HTTP $new_enrollment_status - 新しい履修登録の作成に失敗しました${NC}"
+    fi
+    echo ""
+
+else
+    echo -e "${YELLOW}⚠ StudentまたはCourseOfferingが作成されていないため、Enrollmentテストをスキップします${NC}"
+    echo ""
+fi
+
+# ========================================
 # 完了サマリー
 # ========================================
 echo -e "${BLUE}"

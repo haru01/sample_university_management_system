@@ -47,14 +47,14 @@
 | CancelCourseOfferingCommandHandler | CancelCourseOfferingCommand | コース開講をキャンセル | ✅ 完了 |
 | CopyCourseOfferingsFromPreviousSemesterCommandHandler | CopyCourseOfferingsFromPreviousSemesterCommand | 前学期のコース開講情報を一括コピー | ⬜ 未実装 |
 
-### 履修登録 (Phase 5 - 未実装) → エピック5
+### 履修登録 (Phase 5 - 完了) → エピック5
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
-| EnrollStudentCommandHandler | EnrollStudentCommand | 履修登録 | ⬜ 未実装 |
-| CancelEnrollmentCommandHandler | CancelEnrollmentCommand | 履修登録キャンセル | ⬜ 未実装 |
-| GetStudentEnrollmentsQueryHandler | GetStudentEnrollmentsQuery | 履修登録一覧を取得 | ⬜ 未実装 |
-| CompleteEnrollmentCommandHandler | CompleteEnrollmentCommand | 履修登録を完了 | ⬜ 未実装 |
+| EnrollStudentCommandHandler | EnrollStudentCommand | 履修登録 | ✅ 完了 |
+| CancelEnrollmentCommandHandler | CancelEnrollmentCommand | 履修登録キャンセル | ✅ 完了 |
+| GetStudentEnrollmentsQueryHandler | GetStudentEnrollmentsQuery | 履修登録一覧を取得 | ✅ 完了 |
+| CompleteEnrollmentCommandHandler | CompleteEnrollmentCommand | 履修登録を完了 | ✅ 完了 |
 
 ---
 
@@ -1033,9 +1033,16 @@ Scenario: 学生が有効なコース開講を履修登録する
   When EnrollStudentCommandを実行する
     - StudentId: "123e4567-e89b-12d3-a456-426614174000"
     - OfferingId: 1
+    - EnrolledBy: "student-123e4567-e89b-12d3-a456-426614174000"
   Then 履修登録ID（EnrollmentId）が返される
-  And データベースに履修登録が保存されている
-  And 履修登録ステータスが "InProgress" である
+  And データベースにEnrollmentが保存されている
+    - CurrentStatus: "InProgress"
+    - CreatedAt: （実行時刻）
+  And EnrollmentStatusHistoryに初期レコードが作成される
+    - Status: "InProgress"
+    - ChangedBy: "student-123e4567-e89b-12d3-a456-426614174000"
+    - Reason: "Initial enrollment" または null（初期登録は理由不要）
+    - ChangedAt: （実行時刻）
 ```
 
 ```gherkin
@@ -1142,14 +1149,32 @@ API利用者として、履修登録をキャンセルできるようにした�
 **受け入れ条件:**
 
 ```gherkin
-Scenario: 進行中の履修登録をキャンセルする
+Scenario: 進行中の履修登録を理由付きでキャンセルする
   Given データベースに履修登録ID "abc-123" の履修登録が存在する
   And 履修登録ステータスが "InProgress" である
   When CancelEnrollmentCommandを実行する
     - EnrollmentId: "abc-123"
+    - Reason: "履修計画の変更"
+    - ChangedBy: "student-001"
   Then 正常に完了する（戻り値なし）
-  And データベースの履修登録ステータスが "Cancelled" になる
+  And Enrollment.CurrentStatus が "Cancelled" になる
+  And EnrollmentStatusHistoryに新しいレコードが追加される
+    - Status: "Cancelled"
+    - Reason: "履修計画の変更"
+    - ChangedBy: "student-001"
+    - ChangedAt: （実行時刻）
   And 学生の履修単位数が減算される
+```
+
+```gherkin
+Scenario: キャンセル理由なしでキャンセルを試みる
+  Given データベースに履修登録ID "abc-123" の履修登録が存在する
+  And 履修登録ステータスが "InProgress" である
+  When CancelEnrollmentCommandを実行する
+    - EnrollmentId: "abc-123"
+    - Reason: null または空文字列
+  Then ArgumentException がスローされる
+  And エラーメッセージに "Cancellation reason is required" が含まれる
 ```
 
 ```gherkin
@@ -1188,9 +1213,13 @@ Scenario: キャンセル期限を過ぎてキャンセルを試みる
 **制約:**
 
 - キャンセル可能なステータス: InProgress のみ
+- **キャンセル理由（Reason）**: 必須、空文字列不可、最大1000文字
+- **変更者（ChangedBy）**: 必須、学生ID・管理者ID・システムIDなど
 - キャンセル後は履修単位数から減算
 - Completed または Cancelled ステータスはキャンセル不可
 - キャンセルは学期の CancellationDeadline までに行う必要がある
+- **状態遷移ログ**: EnrollmentStatusHistoryテーブルに必ず記録（イミュータブル）
+- **CurrentStatusの更新**: 状態遷移ログ追加後、Enrollment.CurrentStatusを更新
 
 **実装状態:** ⬜ 未実装
 
@@ -1209,14 +1238,15 @@ Scenario: キャンセル期限を過ぎてキャンセルを試みる
 Scenario: 学生の全ての履修登録を取得する
   Given StudentRepositoryにStudentId "student-001" が存在する
   And EnrollmentRepositoryに以下のEnrollmentが存在する
-    | OfferingId | CourseCode | SemesterId      | Status     |
-    | 1          | CS101      | (2024, Spring)  | InProgress |
-    | 2          | MATH201    | (2024, Spring)  | InProgress |
-    | 3          | ENG101     | (2023, Fall)    | Completed  |
+    | OfferingId | CourseCode | SemesterId      | CurrentStatus |
+    | 1          | CS101      | (2024, Spring)  | InProgress    |
+    | 2          | MATH201    | (2024, Spring)  | InProgress    |
+    | 3          | ENG101     | (2023, Fall)    | Completed     |
   When GetStudentEnrollmentsQueryを実行する
     - StudentId: "student-001"
   Then 3件のEnrollmentDtoが返される
   And Semesterの新しい順にソートされている
+  And 各EnrollmentDtoにはCurrentStatusが含まれる
 ```
 
 ```gherkin
@@ -1225,7 +1255,7 @@ Scenario: ステータスでフィルタリングして履修登録を取得す�
   When GetStudentEnrollmentsQueryを実行する
     - StudentId: "student-001"
     - StatusFilter: InProgress
-  Then StatusがInProgressのEnrollmentDtoのみが返される
+  Then CurrentStatusがInProgressのEnrollmentDtoのみが返される
 ```
 
 ```gherkin
@@ -1249,6 +1279,8 @@ Scenario: 存在しない学生IDで一覧を取得しようとする
 - 学生は自分の履修登録のみ閲覧可能
 - デフォルトソート: 学期の新しい順
 - ステータスフィルタリング: オプショナル
+- **CurrentStatus**: Enrollmentテーブルの非正規化フィールドから取得（パフォーマンス最適化）
+- **注意**: 状態遷移履歴が必要な場合は別途EnrollmentStatusHistoryを取得する機能が必要
 
 **実装状態:** ⬜ 未実装
 
@@ -1266,30 +1298,42 @@ Scenario: 存在しない学生IDで一覧を取得しようとする
 ```gherkin
 Scenario: 進行中の履修登録を完了する
   Given EnrollmentRepositoryにEnrollmentId "enrollment-001" が存在する
-  And EnrollmentのStatusがInProgressである
+  And EnrollmentのCurrentStatusがInProgressである
   When CompleteEnrollmentCommandを実行する
     - EnrollmentId: "enrollment-001"
-  Then EnrollmentのStatusがCompletedに更新される
-  And CompletedAtが記録される
+    - ChangedBy: "system-grade-processor"
+    - Reason: "学期終了による自動完了" または null（オプション）
+  Then Enrollment.CurrentStatusがCompletedに更新される
+  And EnrollmentStatusHistoryに新しいレコードが追加される
+    - Status: "Completed"
+    - ChangedBy: "system-grade-processor"
+    - Reason: "学期終了による自動完了" または null
+    - ChangedAt: （実行時刻）
   And EnrollmentRepositoryに保存される
 ```
 
 ```gherkin
 Scenario: 既に完了している履修登録を再度完了しようとする
   Given EnrollmentRepositoryにEnrollmentId "enrollment-001" が存在する
-  And EnrollmentのStatusがCompletedである
+  And EnrollmentのCurrentStatusがCompletedである
   When CompleteEnrollmentCommandを実行する
+    - EnrollmentId: "enrollment-001"
+    - ChangedBy: "system"
   Then DomainException "Already completed" がスローされる
-  And Statusは変更されない
+  And CurrentStatusは変更されない
+  And EnrollmentStatusHistoryに新しいレコードは追加されない
 ```
 
 ```gherkin
 Scenario: キャンセル済みの履修登録を完了しようとする
   Given EnrollmentRepositoryにEnrollmentId "enrollment-001" が存在する
-  And EnrollmentのStatusがCancelledである
+  And EnrollmentのCurrentStatusがCancelledである
   When CompleteEnrollmentCommandを実行する
+    - EnrollmentId: "enrollment-001"
+    - ChangedBy: "system"
   Then DomainException "Cannot complete cancelled enrollment" がスローされる
-  And Statusは変更されない
+  And CurrentStatusは変更されない
+  And EnrollmentStatusHistoryに新しいレコードは追加されない
 ```
 
 ```gherkin
@@ -1303,7 +1347,10 @@ Scenario: 存在しない履修登録IDで完了を試みる
 
 - 完了可能なステータス: InProgress のみ
 - Completed または Cancelled からの完了は不可
-- 完了日時を自動記録
+- **変更者（ChangedBy）**: 必須、システムID・管理者IDなど
+- **理由（Reason）**: オプション（学期終了時の一括完了の場合など）
+- **状態遷移ログ**: EnrollmentStatusHistoryテーブルに必ず記録（イミュータブル）
+- **CurrentStatusの更新**: 状態遷移ログ追加後、Enrollment.CurrentStatusを更新
 
 **実装状態:** ⬜ 未実装
 
@@ -1326,33 +1373,86 @@ Scenario: 存在しない履修登録IDで完了を試みる
 
 ### 履修登録（Enrollment）
 
+#### 集約ルート: Enrollment
+
 - **エンティティ構造**:
-  - EnrollmentId: UUID（自動生成）
+  - EnrollmentId: UUID（自動生成、主キー）
   - StudentId: UUID（外部キー）
   - OfferingId: INT（外部キー）
-  - SemesterId: 複合値オブジェクト（非正規化、検索・集計用）
-  - CourseCode: VARCHAR(10)（非正規化、重複チェック用）
-  - Credits: INT（非正規化、単位計算用）
+  - CurrentStatus: ENUM（InProgress, Completed, Cancelled）※最新状態のキャッシュ
+  - CreatedAt: TIMESTAMP（履修登録作成日時）
+
+- **注意**:
+  - `CurrentStatus` は最新の `EnrollmentStatusHistory` から算出された値
+  - ステータス変更は全て `EnrollmentStatusHistory` テーブルに記録
+  - パフォーマンスのためCurrentStatusをキャッシュするが、信頼できる情報源はStatusHistory
+
+#### 子エンティティ: EnrollmentStatusHistory（状態遷移ログ）
+
+- **エンティティ構造**:
+  - HistoryId: UUID（自動生成、主キー）
+  - EnrollmentId: UUID（外部キー → Enrollment）
   - Status: ENUM（InProgress, Completed, Cancelled）
-- **非正規化の理由**:
-  - 学期ごとの履修単位数集計の効率化
-  - 同一コース重複チェックの高速化
-  - CourseOfferingがキャンセルされても履修履歴を保持
+  - ChangedAt: TIMESTAMP（状態変更日時）
+  - ChangedBy: VARCHAR(100)（変更者、例: "student-123", "system", "admin-456"）
+  - Reason: TEXT（変更理由、特にCancelledの場合は必須）
+  - Metadata: JSONB（追加情報、オプション）
+
+- **設計方針**:
+  - **イミュータブル**: 一度記録した履歴は更新・削除不可
+  - **完全な監査証跡**: 誰が・いつ・なぜステータスを変更したかを記録
+  - **時系列順**: ChangedAt の昇順で並べることで状態遷移の履歴が追跡可能
+
+- **ステータス判定ロジック**:
+
+  ```sql
+  -- 最新のステータスを取得
+  SELECT Status
+  FROM EnrollmentStatusHistory
+  WHERE EnrollmentId = :enrollmentId
+  ORDER BY ChangedAt DESC, HistoryId DESC
+  LIMIT 1
+  ```
+
+- **非正規化フィールド（Enrollmentテーブル内）**:
+  - SemesterId: 複合値オブジェクト（検索・集計用）
+  - CourseCode: VARCHAR(10)（重複チェック用）
+  - Credits: INT（単位計算用）
+  - **非正規化の理由**:
+    - 学期ごとの履修単位数集計の効率化
+    - 同一コース重複チェックの高速化
+    - CourseOfferingがキャンセルされても履修履歴を保持
+
 - **最大履修単位数**: 24単位/学期
+
 - **単位数計算ルール**:
-  - 現在の履修単位数: 同一学期内で Status = InProgress の Credits 合計
-  - 累積取得単位数: 全学期で Status = Completed の Credits 合計
+  - 現在の履修単位数: 同一学期内で CurrentStatus = InProgress の Credits 合計
+  - 累積取得単位数: 全学期で CurrentStatus = Completed の Credits 合計
   - Cancelled は計算から除外
-- **ステータス遷移**:
-  - `InProgress` → `Completed` ✅
-  - `InProgress` → `Cancelled` ✅
-  - `Completed` → (変更不可) ❌
-  - `Cancelled` → (変更不可) ❌
+
+- **ステータス遷移ルール**:
+  - `InProgress` → `Completed` ✅（理由: 学期終了）
+  - `InProgress` → `Cancelled` ✅（理由: 学生の意思、履修計画変更等）
+  - `Completed` → (変更不可) ❌（理由: 成績確定済み）
+  - `Cancelled` → (変更不可) ❌（理由: 履歴の整合性保持）
+  - **注意**: 状態遷移時は必ず新しいStatusHistoryレコードを作成
+
+- **キャンセル理由の例**:
+  - "履修計画の変更"
+  - "他のコースとの時間重複"
+  - "授業内容が期待と異なる"
+  - "単位数調整のため"
+  - "健康上の理由"
+  - "システム管理者による強制キャンセル"
+
 - **重複登録防止**:
-  - 同じOfferingIdは不可
-  - 同じCourseCodeを同一年度内で複数回履修不可（再履修ケースは別途検討）
+  - 同じOfferingIdで CurrentStatus が InProgress または Completed の履修登録は不可
+  - 同じCourseCodeを同一年度内で CurrentStatus が InProgress または Completed の履修は不可（再履修ケースは別途検討）
+
 - **定員チェック**: CourseOfferingの定員オーバーは登録不可
+
 - **開講状態チェック**: CourseOfferingのStatusが"Active"である必要がある
+
 - **期限チェック**: Semesterの履修登録期限内のみ登録可能
 
 ### 学期（Semester）
