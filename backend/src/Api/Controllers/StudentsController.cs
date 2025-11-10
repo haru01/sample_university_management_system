@@ -8,7 +8,7 @@ using StudentRegistrations.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace StudentRegistrations.Api.Controllers;
+namespace Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

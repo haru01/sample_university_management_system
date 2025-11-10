@@ -63,42 +63,22 @@ services:
     networks:
       - university_network
 
-  # StudentRegistrations API
-  student-registrations-api:
+  # Unified Backend API (両コンテキストを含む)
+  api:
     build:
       context: .
-      dockerfile: src/StudentRegistrations/Api/Dockerfile
-    container_name: student_registrations_api
+      dockerfile: src/Api/Dockerfile
+    container_name: university_api
     ports:
-      - "5001:8080"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__StudentRegistrationsDb: "Host=postgres;Port=5432;Database=university_management;Username=postgres;Password=postgres"
-    depends_on:
-      flyway-student-registrations:
-        condition: service_completed_successfully
-    networks:
-      - university_network
-
-  # Enrollments API
-  enrollments-api:
-    build:
-      context: .
-      dockerfile: src/Enrollments/Api/Dockerfile
-    container_name: enrollments_api
-    ports:
-      - "5000:8080"
+      - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__CoursesDb: "Host=postgres;Port=5432;Database=university_management;Username=postgres;Password=postgres"
-      ExternalServices__StudentRegistrationsApi__BaseUrl: "http://student-registrations-api:8080"
+      ConnectionStrings__StudentRegistrationsDb: "Host=postgres;Port=5432;Database=university_management;Username=postgres;Password=postgres"
     depends_on:
       flyway-enrollments:
         condition: service_completed_successfully
-      student-registrations-api:
-        condition: service_started
     networks:
       - university_network
 

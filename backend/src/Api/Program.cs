@@ -1,5 +1,6 @@
 using System.Reflection;
-using Enrollments.Api.Middleware;
+using Api.Middleware;
+using Api.Services;
 using Enrollments.Application.Services;
 using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.CourseOfferingAggregate;
@@ -7,7 +8,9 @@ using Enrollments.Domain.EnrollmentAggregate;
 using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
-using Enrollments.Infrastructure.Services;
+using StudentRegistrations.Domain.StudentAggregate;
+using StudentRegistrations.Infrastructure.Persistence;
+using StudentRegistrations.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,51 +24,60 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "University Management API",
         Version = "v1",
-        Description = "大学管理システムAPI - 履修管理・出席管理・成績評価"
+        Description = "大学管理システム統合API - 学生在籍管理・履修管理"
     });
 });
 
-// Database
-// 環境変数からの接続文字列を優先、なければappsettingsから取得
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING")
-    ?? builder.Configuration.GetConnectionString("CoursesDb");
+// Database - StudentRegistrations
+var studentRegistrationsConnectionString =
+    builder.Configuration.GetConnectionString("StudentRegistrationsDb");
 
-if (string.IsNullOrEmpty(connectionString))
+if (string.IsNullOrEmpty(studentRegistrationsConnectionString))
 {
     throw new InvalidOperationException(
-        "Database connection string not found. " +
-        "Set DATABASE_CONNECTION_STRING environment variable or configure appsettings.json");
+        "StudentRegistrations connection string not found. " +
+        "Configure ConnectionStrings:StudentRegistrationsDb in appsettings.json or environment variables");
+}
+
+builder.Services.AddDbContext<StudentRegistrationsDbContext>(options =>
+    options.UseNpgsql(studentRegistrationsConnectionString, npgsqlOptions =>
+        npgsqlOptions.EnableRetryOnFailure()));
+
+// Database - Courses (Enrollments)
+var coursesConnectionString =
+    builder.Configuration.GetConnectionString("CoursesDb");
+
+if (string.IsNullOrEmpty(coursesConnectionString))
+{
+    throw new InvalidOperationException(
+        "Courses connection string not found. " +
+        "Configure ConnectionStrings:CoursesDb in appsettings.json or environment variables");
 }
 
 builder.Services.AddDbContext<CoursesDbContext>(options =>
-    options.UseNpgsql(connectionString, npgsqlOptions =>
+    options.UseNpgsql(coursesConnectionString, npgsqlOptions =>
         npgsqlOptions.EnableRetryOnFailure()));
 
 // PostgreSQL: DateTimeをUTCとして扱う設定
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", false);
 
-// Repositories
+// Repositories - StudentRegistrations
+builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+
+// Repositories - Enrollments
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICourseOfferingRepository, CourseOfferingRepository>();
 builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 
-// Anti-Corruption Layer: StudentRegistrationsコンテキストへのHTTPクライアント
-var studentApiBaseUrl = builder.Configuration["ExternalServices:StudentRegistrationsApi:BaseUrl"]
-    ?? throw new InvalidOperationException(
-        "StudentRegistrations API base URL not configured. " +
-        "Set ExternalServices:StudentRegistrationsApi:BaseUrl in appsettings.json");
-
-builder.Services.AddHttpClient<IStudentServiceClient, StudentServiceClient>()
-    .ConfigureHttpClient(client =>
-    {
-        client.BaseAddress = new Uri(studentApiBaseUrl);
-        client.Timeout = TimeSpan.FromSeconds(30);
-    });
+// Student Service - 統合API内でリポジトリ経由で直接アクセス
+// HTTP経由のACLは不要（同一プロセス内）
+builder.Services.AddScoped<IStudentServiceClient, DirectStudentServiceClient>();
 
 // MediatR - CommandHandlers/QueryHandlersを自動登録
 builder.Services.AddMediatR(cfg =>
 {
+    cfg.RegisterServicesFromAssembly(Assembly.Load("StudentRegistrations.Application"));
     cfg.RegisterServicesFromAssembly(Assembly.Load("Enrollments.Application"));
 });
 

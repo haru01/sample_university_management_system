@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Enrollments.Domain.Exceptions;
 
-namespace Enrollments.Api.Middleware;
+namespace Api.Middleware;
 
 /// <summary>
 /// グローバル例外ハンドラーミドルウェア

@@ -4,7 +4,7 @@ using Enrollments.Application.Queries.SelectCourses;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Enrollments.Api.Controllers;
+namespace Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

@@ -6,7 +6,7 @@ using Enrollments.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Enrollments.Api.Controllers;
+namespace Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
