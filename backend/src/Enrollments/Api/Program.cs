@@ -1,11 +1,13 @@
 using System.Reflection;
 using Enrollments.Api.Middleware;
+using Enrollments.Application.Services;
 using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.EnrollmentAggregate;
 using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
+using Enrollments.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,6 +49,19 @@ builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICourseOfferingRepository, CourseOfferingRepository>();
 builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
+
+// Anti-Corruption Layer: StudentRegistrationsコンテキストへのHTTPクライアント
+var studentApiBaseUrl = builder.Configuration["ExternalServices:StudentRegistrationsApi:BaseUrl"]
+    ?? throw new InvalidOperationException(
+        "StudentRegistrations API base URL not configured. " +
+        "Set ExternalServices:StudentRegistrationsApi:BaseUrl in appsettings.json");
+
+builder.Services.AddHttpClient<IStudentServiceClient, StudentServiceClient>()
+    .ConfigureHttpClient(client =>
+    {
+        client.BaseAddress = new Uri(studentApiBaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
 
 // MediatR - CommandHandlers/QueryHandlersを自動登録
 builder.Services.AddMediatR(cfg =>
