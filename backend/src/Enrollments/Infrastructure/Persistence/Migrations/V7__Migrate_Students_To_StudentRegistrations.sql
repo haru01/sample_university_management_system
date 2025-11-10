@@ -47,7 +47,7 @@ COMMENT ON COLUMN courses.enrollments.student_id IS 'References student_registra
 -- Step 5: 移行確認用のビュー作成（オプション）
 CREATE OR REPLACE VIEW courses.v_enrollment_students AS
 SELECT
-    e.id AS enrollment_id,
+    e.enrollment_id,
     e.student_id,
     s.name AS student_name,
     s.email AS student_email,

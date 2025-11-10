@@ -22,6 +22,7 @@ services:
   # Flywayマイグレーション（StudentRegistrations）
   flyway-student-registrations:
     image: flyway/flyway:10-alpine
+    platform: linux/amd64
     container_name: university_flyway_student_registrations
     command: migrate
     volumes:
@@ -42,6 +43,7 @@ services:
   # Flywayマイグレーション（Enrollments）
   flyway-enrollments:
     image: flyway/flyway:10-alpine
+    platform: linux/amd64
     container_name: university_flyway_enrollments
     command: migrate
     volumes:
