@@ -8,59 +8,94 @@ C# (.NET 8) + Entity Framework Core + DDD + レイヤーアーキテクチャ + 
 ```
 UniversityManagement/
 ├── src/
-│   ├── Enrollments/                    # 履修管理コンテキスト
+│   ├── Shared/                         # 共有カーネル（Shared Kernel）
+│   │   ├── ValueObjects/
+│   │   │   └── StudentId.cs           # 学生ID（両コンテキストで共有）
+│   │   ├── Entity.cs
+│   │   ├── AggregateRoot.cs
+│   │   └── DomainEvent.cs
+│   │
+│   ├── StudentRegistrations/          # 学生在籍管理コンテキスト
+│   │   ├── Domain/
+│   │   │   └── StudentAggregate/
+│   │   │       ├── Student.cs
+│   │   │       └── IStudentRepository.cs
+│   │   ├── Application/
+│   │   │   ├── Commands/
+│   │   │   │   ├── CreateStudent/
+│   │   │   │   └── UpdateStudent/
+│   │   │   └── Queries/
+│   │   │       ├── GetStudent/
+│   │   │       └── SelectStudents/
+│   │   ├── Infrastructure/
+│   │   │   ├── Persistence/
+│   │   │   │   ├── StudentRegistrationsDbContext.cs
+│   │   │   │   ├── Configurations/
+│   │   │   │   ├── Repositories/
+│   │   │   │   └── Migrations/
+│   │   │   │       └── V1__Create_Students.sql
+│   │   │   └── Services/
+│   │   └── Api/
+│   │       ├── Controllers/
+│   │       │   └── StudentsController.cs
+│   │       └── Program.cs
+│   │
+│   ├── Enrollments/                   # 履修登録管理コンテキスト
 │   │   ├── Domain/
 │   │   │   ├── EnrollmentAggregate/
 │   │   │   │   ├── Enrollment.cs
 │   │   │   │   ├── EnrollmentId.cs
 │   │   │   │   ├── EnrollmentStatus.cs
-│   │   │   │   ├── IEnrollmentRepository.cs
-│   │   │   │   └── Events/
-│   │   │   ├── StudentAggregate/
-│   │   │   │   ├── Student.cs
-│   │   │   │   ├── StudentId.cs
-│   │   │   │   └── IStudentRepository.cs
+│   │   │   │   └── IEnrollmentRepository.cs
 │   │   │   ├── CourseAggregate/
 │   │   │   │   ├── Course.cs
 │   │   │   │   ├── CourseCode.cs
 │   │   │   │   └── ICourseRepository.cs
-│   │   │   └── Services/
+│   │   │   ├── CourseOfferingAggregate/
+│   │   │   │   ├── CourseOffering.cs
+│   │   │   │   ├── OfferingId.cs
+│   │   │   │   └── ICourseOfferingRepository.cs
+│   │   │   └── SemesterAggregate/
+│   │   │       ├── Semester.cs
+│   │   │       ├── SemesterId.cs
+│   │   │       └── ISemesterRepository.cs
 │   │   ├── Application/
 │   │   │   ├── Commands/
-│   │   │   │   └── EnrollStudent/
-│   │   │   │       ├── EnrollStudentCommand.cs
-│   │   │   │       ├── EnrollStudentCommandHandler.cs
-│   │   │   │       └── EnrollStudentCommandValidator.cs
+│   │   │   │   ├── EnrollStudent/
+│   │   │   │   ├── CancelEnrollment/
+│   │   │   │   └── CompleteEnrollment/
 │   │   │   ├── Queries/
-│   │   │   │   └── GetEnrollmentsByStudent/
-│   │   │   │       ├── GetEnrollmentsByStudentQuery.cs
-│   │   │   │       ├── GetEnrollmentsByStudentQueryHandler.cs
-│   │   │   │       └── EnrollmentSummaryDto.cs
-│   │   │   └── Common/
+│   │   │   │   └── GetStudentEnrollments/
+│   │   │   └── Services/
+│   │   │       └── IStudentServiceClient.cs  # ACL: StudentRegistrations APIクライアント
 │   │   ├── Infrastructure/
 │   │   │   ├── Persistence/
-│   │   │   │   ├── EnrollmentDbContext.cs
-│   │   │   │   └── Repositories/
-│   │   │   └── External/
+│   │   │   │   ├── CoursesDbContext.cs
+│   │   │   │   ├── Configurations/
+│   │   │   │   ├── Repositories/
+│   │   │   │   └── Migrations/
+│   │   │   │       └── V7__Migrate_Students_To_StudentRegistrations.sql
+│   │   │   └── Services/
+│   │   │       └── StudentServiceClient.cs   # ACL実装（HTTP経由）
 │   │   └── Api/
 │   │       ├── Controllers/
-│   │       └── Models/
+│   │       │   ├── EnrollmentsController.cs
+│   │       │   ├── CoursesController.cs
+│   │       │   └── SemestersController.cs
+│   │       └── Program.cs
 │   │
-│   ├── Attendances/                    # 出席管理コンテキスト
-│   ├── Grading/                        # 成績評価コンテキスト
-│   └── Shared/                         # 共有カーネル
-│       ├── Entity.cs
-│       ├── ValueObject.cs
-│       └── DomainEvent.cs
+│   ├── Attendances/                   # 出席管理コンテキスト（未実装）
+│   └── Grading/                       # 成績評価コンテキスト（未実装）
 │
 ├── tests/
-│   ├── Enrollments.Tests/
-│   ├── Attendances.Tests/
-│   └── Grading.Tests/
+│   ├── StudentRegistrations.Tests/
+│   └── Enrollments.Tests/
 │
-├── Claude.md                           # このファイル
+├── AGENTS.md                          # このファイル
+├── REFACTORING_PLAN.md               # リファクタリング計画書
 └── contexts/
-    └── *.md                           # 各ドメインの詳細知識
+    ├── CONTEXT_MAP.md                # コンテキストマップ
+    └── impl-patterns/                # 実装パターン集
 ```
 
 ## アーキテクチャ設計原則
@@ -340,6 +375,44 @@ dotnet test --logger "console;verbosity=normal"
 3. **セキュリティ**
    - 全APIエンドポイントに認証・認可
    - 入力値は必ずバリデーション
+
+---
+
+## コンテキストマップ
+
+このシステムは、DDD の Bounded Context パターンに基づいて、複数の独立したコンテキストに分割されています。
+
+### StudentRegistrations ←→ Enrollments
+
+**関係性:** Customer-Supplier（Enrollments が Customer、StudentRegistrations が Supplier）
+
+**統合方式:** ACL (Anti-Corruption Layer) - HTTP通信
+
+- **Enrollments** は **StudentRegistrations** の公開APIを経由して学生情報を参照
+- **StudentId** は Shared Kernel として両コンテキストで共有
+- 直接的なデータベーススキーマ結合は避け、アプリケーションレベルで整合性を保証
+
+**データフロー:**
+```
+Enrollments.EnrollStudentCommandHandler
+  → IStudentServiceClient (ACL Interface)
+    → StudentServiceClient (ACL Implementation, HTTP)
+      → HTTP GET /api/students/{id}
+        → StudentRegistrations API
+          → StudentRepository
+            → student_registrations.students table
+```
+
+**Shared Kernel:**
+- `StudentId` 値オブジェクト (Shared/ValueObjects/)
+
+**データベーススキーマ分離:**
+- **student_registrations** スキーマ: `students` テーブル
+- **courses** スキーマ: `courses`, `semesters`, `course_offerings`, `enrollments` テーブル
+  - `enrollments.student_id` は `student_registrations.students.id` を参照（アプリケーションレベルのみ）
+  - データベース外部キー制約なし（コンテキスト独立性を維持）
+
+詳細は [contexts/CONTEXT_MAP.md](contexts/CONTEXT_MAP.md) を参照してください。
 
 ---
 
