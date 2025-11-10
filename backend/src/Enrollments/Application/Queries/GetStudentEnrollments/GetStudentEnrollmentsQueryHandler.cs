@@ -1,4 +1,5 @@
 using Enrollments.Application.Queries.Enrollments;
+using Enrollments.Application.Services;
 using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.EnrollmentAggregate;
@@ -17,21 +18,30 @@ public class GetStudentEnrollmentsQueryHandler : IRequestHandler<GetStudentEnrol
     private readonly IEnrollmentRepository _enrollmentRepository;
     private readonly ICourseOfferingRepository _courseOfferingRepository;
     private readonly ICourseRepository _courseRepository;
+    private readonly IStudentServiceClient _studentServiceClient;
 
     public GetStudentEnrollmentsQueryHandler(
         IEnrollmentRepository enrollmentRepository,
         ICourseOfferingRepository courseOfferingRepository,
-        ICourseRepository courseRepository)
+        ICourseRepository courseRepository,
+        IStudentServiceClient studentServiceClient)
     {
         _enrollmentRepository = enrollmentRepository;
         _courseOfferingRepository = courseOfferingRepository;
         _courseRepository = courseRepository;
+        _studentServiceClient = studentServiceClient;
     }
 
     public async Task<List<EnrollmentDto>> Handle(GetStudentEnrollmentsQuery request, CancellationToken cancellationToken)
     {
-        // TODO: Phase 8でStudentRegistrations APIを呼び出して学生情報（名前など）を取得する
+        // 学生の存在確認と名前の取得（StudentRegistrations APIを呼び出す）
         var studentId = new StudentId(request.StudentId);
+        var studentName = await _studentServiceClient.GetStudentNameAsync(studentId, cancellationToken);
+
+        if (studentName == null)
+        {
+            throw new NotFoundException($"学生ID {request.StudentId} が見つかりません");
+        }
 
         // ステータスフィルターをパース（指定されている場合）
         EnrollmentStatus? statusFilter = null;
@@ -76,7 +86,7 @@ public class GetStudentEnrollmentsQueryHandler : IRequestHandler<GetStudentEnrol
             {
                 EnrollmentId = enrollment.Id.Value,
                 StudentId = enrollment.StudentId.Value,
-                StudentName = "", // TODO: Phase 8でStudentRegistrations APIから学生名を取得
+                StudentName = studentName,
                 OfferingId = enrollment.OfferingId.Value,
                 CourseCode = courseOffering.CourseCode.Value,
                 CourseName = course.Name,

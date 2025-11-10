@@ -1,3 +1,4 @@
+using Enrollments.Application.Services;
 using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.EnrollmentAggregate;
 using Enrollments.Domain.Exceptions;
@@ -13,19 +14,28 @@ public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand,
 {
     private readonly IEnrollmentRepository _enrollmentRepository;
     private readonly ICourseOfferingRepository _courseOfferingRepository;
+    private readonly IStudentServiceClient _studentServiceClient;
 
     public EnrollStudentCommandHandler(
         IEnrollmentRepository enrollmentRepository,
-        ICourseOfferingRepository courseOfferingRepository)
+        ICourseOfferingRepository courseOfferingRepository,
+        IStudentServiceClient studentServiceClient)
     {
         _enrollmentRepository = enrollmentRepository;
         _courseOfferingRepository = courseOfferingRepository;
+        _studentServiceClient = studentServiceClient;
     }
 
     public async Task<Guid> Handle(EnrollStudentCommand request, CancellationToken cancellationToken)
     {
-        // 1. 学生IDの作成（TODO: Phase 8でStudentRegistrations APIを呼び出して存在確認を行う）
+        // 1. 学生の存在確認（StudentRegistrations APIを呼び出す）
         var studentId = new StudentId(request.StudentId);
+        var studentExists = await _studentServiceClient.ExistsAsync(studentId, cancellationToken);
+
+        if (!studentExists)
+        {
+            throw new NotFoundException($"学生ID {request.StudentId} が見つかりません");
+        }
 
         // 2. コース開講が存在し、アクティブか検証
         var offeringId = new OfferingId(request.OfferingId);
