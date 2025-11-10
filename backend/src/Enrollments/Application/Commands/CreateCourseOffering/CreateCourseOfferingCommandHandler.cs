@@ -45,7 +45,8 @@ public class CreateCourseOfferingCommandHandler : IRequestHandler<CreateCourseOf
         var existing = await _courseOfferingRepository.GetByCourseAndSemesterAsync(
             courseCode, semesterId, cancellationToken);
         if (existing != null)
-            throw new InvalidOperationException(
+            throw new ConflictException(
+                "COURSE_ALREADY_OFFERED",
                 $"Course {courseCode} is already offered in this semester {semesterId}");
 
         // 次のOfferingIdを取得

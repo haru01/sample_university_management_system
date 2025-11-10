@@ -47,9 +47,17 @@ public class GlobalExceptionMiddleware
                 HttpStatusCode.NotFound,
                 new ErrorResponse(notFoundEx.Code, notFoundEx.Message)
             ),
+            KeyNotFoundException keyNotFoundEx => (
+                HttpStatusCode.NotFound,
+                new ErrorResponse("NOT_FOUND", keyNotFoundEx.Message)
+            ),
             ArgumentException argEx => (
                 HttpStatusCode.BadRequest,
                 new ErrorResponse("INVALID_ARGUMENT", argEx.Message)
+            ),
+            InvalidOperationException invalidOpEx => (
+                HttpStatusCode.BadRequest,
+                new ErrorResponse("BAD_REQUEST", invalidOpEx.Message)
             ),
             _ => (
                 HttpStatusCode.InternalServerError,

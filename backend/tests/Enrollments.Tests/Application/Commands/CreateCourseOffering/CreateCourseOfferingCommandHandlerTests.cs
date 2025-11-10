@@ -131,7 +131,7 @@ public class CreateCourseOfferingCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task 同一学期に既に開講されているコースでInvalidOperationExceptionがスローされる()
+    public async Task 同一学期に既に開講されているコースでConflictExceptionがスローされる()
     {
         // Arrange
         var course = new CourseBuilder()
@@ -163,7 +163,7 @@ public class CreateCourseOfferingCommandHandlerTests : IDisposable
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<ConflictException>(
             async () => await _handler.Handle(command, CancellationToken.None));
     }
 
