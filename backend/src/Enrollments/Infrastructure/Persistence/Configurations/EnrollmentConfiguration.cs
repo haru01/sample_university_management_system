@@ -1,8 +1,8 @@
 using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.EnrollmentAggregate;
-using Enrollments.Domain.StudentAggregate;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Shared.ValueObjects;
 
 namespace Enrollments.Infrastructure.Persistence.Configurations;
 

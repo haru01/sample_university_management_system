@@ -1,5 +1,6 @@
 using Enrollments.Domain.Exceptions;
 using Shared;
+using Shared.ValueObjects;
 using System.Text.RegularExpressions;
 
 namespace Enrollments.Domain.StudentAggregate;
@@ -37,7 +38,7 @@ public class Student : AggregateRoot<StudentId>
         EnsureEmailValid(email);
         EnsureGradeBetween1And4(grade);
 
-        var studentId = new StudentId();
+        var studentId = StudentId.CreateNew();
         return new Student(studentId, name, email, grade);
     }
 

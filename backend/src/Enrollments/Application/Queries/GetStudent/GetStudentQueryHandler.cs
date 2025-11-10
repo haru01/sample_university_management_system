@@ -1,6 +1,7 @@
 using Enrollments.Application.Queries.Students;
 using Enrollments.Domain.StudentAggregate;
 using MediatR;
+using Shared.ValueObjects;
 
 namespace Enrollments.Application.Queries.GetStudent;
 

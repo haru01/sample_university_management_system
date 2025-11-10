@@ -1,3 +1,5 @@
+using Shared.ValueObjects;
+
 namespace Enrollments.Domain.StudentAggregate;
 
 /// <summary>

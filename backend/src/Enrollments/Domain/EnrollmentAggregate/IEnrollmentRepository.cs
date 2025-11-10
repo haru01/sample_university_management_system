@@ -1,5 +1,5 @@
 using Enrollments.Domain.CourseOfferingAggregate;
-using Enrollments.Domain.StudentAggregate;
+using Shared.ValueObjects;
 
 namespace Enrollments.Domain.EnrollmentAggregate;
 

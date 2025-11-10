@@ -1,5 +1,6 @@
 using Enrollments.Domain.StudentAggregate;
 using Microsoft.EntityFrameworkCore;
+using Shared.ValueObjects;
 
 namespace Enrollments.Infrastructure.Persistence.Repositories;
 

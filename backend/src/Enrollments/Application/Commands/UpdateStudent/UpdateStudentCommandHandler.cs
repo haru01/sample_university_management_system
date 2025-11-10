@@ -1,6 +1,7 @@
 using Enrollments.Domain.StudentAggregate;
 using Enrollments.Domain.Exceptions;
 using MediatR;
+using Shared.ValueObjects;
 
 namespace Enrollments.Application.Commands.UpdateStudent;
 

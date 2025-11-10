@@ -1,7 +1,7 @@
 using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.Exceptions;
-using Enrollments.Domain.StudentAggregate;
 using Shared;
+using Shared.ValueObjects;
 
 namespace Enrollments.Domain.EnrollmentAggregate;
 

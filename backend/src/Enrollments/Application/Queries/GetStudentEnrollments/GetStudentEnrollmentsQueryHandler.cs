@@ -6,6 +6,7 @@ using Enrollments.Domain.Exceptions;
 using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Domain.StudentAggregate;
 using MediatR;
+using Shared.ValueObjects;
 
 namespace Enrollments.Application.Queries.GetStudentEnrollments;
 

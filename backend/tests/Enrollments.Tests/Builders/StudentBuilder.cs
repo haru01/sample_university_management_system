@@ -1,4 +1,5 @@
 using Enrollments.Domain.StudentAggregate;
+using Shared.ValueObjects;
 
 namespace Enrollments.Tests.Builders;
 
@@ -7,7 +8,7 @@ namespace Enrollments.Tests.Builders;
 /// </summary>
 public class StudentBuilder
 {
-    private StudentId _id = new();
+    private StudentId _id = StudentId.CreateNew();
     private string _name = "デフォルト名前です";
     private string _email = "default@example.com";
     private int _grade = 1;

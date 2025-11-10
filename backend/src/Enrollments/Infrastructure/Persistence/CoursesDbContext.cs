@@ -5,6 +5,7 @@ using Enrollments.Domain.StudentAggregate;
 using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
+using Shared.ValueObjects;
 
 namespace Enrollments.Infrastructure.Persistence;
 

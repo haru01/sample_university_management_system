@@ -3,6 +3,7 @@ using Enrollments.Domain.EnrollmentAggregate;
 using Enrollments.Domain.Exceptions;
 using Enrollments.Domain.StudentAggregate;
 using MediatR;
+using Shared.ValueObjects;
 
 namespace Enrollments.Application.Commands.EnrollStudent;
 
