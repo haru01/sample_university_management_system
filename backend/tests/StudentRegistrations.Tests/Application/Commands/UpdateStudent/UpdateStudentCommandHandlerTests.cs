@@ -1,28 +1,28 @@
-using Enrollments.Application.Commands.UpdateStudent;
-using Enrollments.Domain.Exceptions;
-using Enrollments.Infrastructure.Persistence;
-using Enrollments.Infrastructure.Persistence.Repositories;
-using Enrollments.Tests.Builders;
+using StudentRegistrations.Application.Commands.UpdateStudent;
+using StudentRegistrations.Domain.Exceptions;
+using StudentRegistrations.Infrastructure.Persistence;
+using StudentRegistrations.Infrastructure.Persistence.Repositories;
+using StudentRegistrations.Tests.Builders;
 using Microsoft.EntityFrameworkCore;
 
-namespace Enrollments.Tests.Application.Commands;
+namespace StudentRegistrations.Tests.Application.Commands;
 
 /// <summary>
 /// UpdateStudentCommandHandlerのテスト
 /// </summary>
 public class UpdateStudentCommandHandlerTests : IDisposable
 {
-    private readonly CoursesDbContext _context;
+    private readonly StudentRegistrationsDbContext _context;
     private readonly UpdateStudentCommandHandler _handler;
 
     public UpdateStudentCommandHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
-        var options = new DbContextOptionsBuilder<CoursesDbContext>()
+        var options = new DbContextOptionsBuilder<StudentRegistrationsDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _context = new CoursesDbContext(options);
+        _context = new StudentRegistrationsDbContext(options);
 
         // ハンドラーの依存関係を初期化
         var studentRepository = new StudentRepository(_context);

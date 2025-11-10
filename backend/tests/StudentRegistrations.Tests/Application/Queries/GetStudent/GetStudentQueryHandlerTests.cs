@@ -1,27 +1,27 @@
-using Enrollments.Application.Queries.GetStudent;
-using Enrollments.Infrastructure.Persistence;
-using Enrollments.Infrastructure.Persistence.Repositories;
-using Enrollments.Tests.Builders;
+using StudentRegistrations.Application.Queries.GetStudent;
+using StudentRegistrations.Infrastructure.Persistence;
+using StudentRegistrations.Infrastructure.Persistence.Repositories;
+using StudentRegistrations.Tests.Builders;
 using Microsoft.EntityFrameworkCore;
 
-namespace Enrollments.Tests.Application.Queries.GetStudent;
+namespace StudentRegistrations.Tests.Application.Queries.GetStudent;
 
 /// <summary>
 /// GetStudentQueryHandlerのテスト
 /// </summary>
 public class GetStudentQueryHandlerTests : IDisposable
 {
-    private readonly CoursesDbContext _context;
+    private readonly StudentRegistrationsDbContext _context;
     private readonly GetStudentQueryHandler _handler;
 
     public GetStudentQueryHandlerTests()
     {
         // 各テストごとに新しいDbContextを作成
-        var options = new DbContextOptionsBuilder<CoursesDbContext>()
+        var options = new DbContextOptionsBuilder<StudentRegistrationsDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _context = new CoursesDbContext(options);
+        _context = new StudentRegistrationsDbContext(options);
 
         // ハンドラーの依存関係を初期化
         var studentRepository = new StudentRepository(_context);
