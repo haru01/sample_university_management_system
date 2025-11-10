@@ -1,12 +1,18 @@
-version: '3.8'
-
 # 開発環境用のオーバーライド設定
 services:
   postgres:
     ports:
       - "5432:5432"  # ローカルからの接続を許可
 
-  api:
+  student-registrations-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      Logging__LogLevel__Microsoft.EntityFrameworkCore: Information
+
+  enrollments-api:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
