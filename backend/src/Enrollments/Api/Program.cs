@@ -4,7 +4,6 @@ using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.EnrollmentAggregate;
 using Enrollments.Domain.SemesterAggregate;
-using Enrollments.Domain.StudentAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +44,6 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", false);
 
 // Repositories
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
-builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICourseOfferingRepository, CourseOfferingRepository>();
 builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();

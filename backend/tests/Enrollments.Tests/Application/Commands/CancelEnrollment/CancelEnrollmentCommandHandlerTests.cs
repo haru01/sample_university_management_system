@@ -3,8 +3,8 @@ using Enrollments.Domain.EnrollmentAggregate;
 using Enrollments.Domain.Exceptions;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
-using Enrollments.Tests.Builders;
 using Microsoft.EntityFrameworkCore;
+using Shared.ValueObjects;
 
 namespace Enrollments.Tests.Application.Commands.CancelEnrollment;
 
@@ -37,9 +37,8 @@ public class CancelEnrollmentCommandHandlerTests : IDisposable
     public async Task Enrolledステータスの履修登録を正常にキャンセルする()
     {
         // Arrange
-        var student = new StudentBuilder().Build();
-        var enrollment = Enrollment.Create(student.Id, new(1), "student-001");
-        _context.Students.Add(student);
+        var studentId = new StudentId(Guid.NewGuid());
+        var enrollment = Enrollment.Create(studentId, new(1), "student-001");
         _enrollmentRepository.Add(enrollment);
         await _enrollmentRepository.SaveChangesAsync();
 
@@ -72,9 +71,8 @@ public class CancelEnrollmentCommandHandlerTests : IDisposable
     public async Task CancelledByなしでキャンセルを試みると例外がスローされる()
     {
         // Arrange
-        var student = new StudentBuilder().Build();
-        var enrollment = Enrollment.Create(student.Id, new(1), "student-001");
-        _context.Students.Add(student);
+        var studentId = new StudentId(Guid.NewGuid());
+        var enrollment = Enrollment.Create(studentId, new(1), "student-001");
         _enrollmentRepository.Add(enrollment);
         await _enrollmentRepository.SaveChangesAsync();
 
@@ -95,9 +93,8 @@ public class CancelEnrollmentCommandHandlerTests : IDisposable
     public async Task 理由なしでキャンセルを試みると例外がスローされる()
     {
         // Arrange
-        var student = new StudentBuilder().Build();
-        var enrollment = Enrollment.Create(student.Id, new(1), "student-001");
-        _context.Students.Add(student);
+        var studentId = new StudentId(Guid.NewGuid());
+        var enrollment = Enrollment.Create(studentId, new(1), "student-001");
         _enrollmentRepository.Add(enrollment);
         await _enrollmentRepository.SaveChangesAsync();
 
@@ -134,10 +131,9 @@ public class CancelEnrollmentCommandHandlerTests : IDisposable
     public async Task 既にキャンセル済みの履修登録を再度キャンセルしようとすると例外がスローされる()
     {
         // Arrange
-        var student = new StudentBuilder().Build();
-        var enrollment = Enrollment.Create(student.Id, new(1), "student-001");
+        var studentId = new StudentId(Guid.NewGuid());
+        var enrollment = Enrollment.Create(studentId, new(1), "student-001");
         enrollment.Cancel("student-001", "最初のキャンセル");
-        _context.Students.Add(student);
         _enrollmentRepository.Add(enrollment);
         await _enrollmentRepository.SaveChangesAsync();
 
@@ -158,10 +154,9 @@ public class CancelEnrollmentCommandHandlerTests : IDisposable
     public async Task 完了済みの履修登録をキャンセルしようとすると例外がスローされる()
     {
         // Arrange
-        var student = new StudentBuilder().Build();
-        var enrollment = Enrollment.Create(student.Id, new(1), "student-001");
+        var studentId = new StudentId(Guid.NewGuid());
+        var enrollment = Enrollment.Create(studentId, new(1), "student-001");
         enrollment.Complete("system", "完了");
-        _context.Students.Add(student);
         _enrollmentRepository.Add(enrollment);
         await _enrollmentRepository.SaveChangesAsync();
 

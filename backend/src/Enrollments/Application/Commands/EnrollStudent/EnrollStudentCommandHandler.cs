@@ -1,7 +1,6 @@
 using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.EnrollmentAggregate;
 using Enrollments.Domain.Exceptions;
-using Enrollments.Domain.StudentAggregate;
 using MediatR;
 using Shared.ValueObjects;
 
@@ -13,28 +12,20 @@ namespace Enrollments.Application.Commands.EnrollStudent;
 public class EnrollStudentCommandHandler : IRequestHandler<EnrollStudentCommand, Guid>
 {
     private readonly IEnrollmentRepository _enrollmentRepository;
-    private readonly IStudentRepository _studentRepository;
     private readonly ICourseOfferingRepository _courseOfferingRepository;
 
     public EnrollStudentCommandHandler(
         IEnrollmentRepository enrollmentRepository,
-        IStudentRepository studentRepository,
         ICourseOfferingRepository courseOfferingRepository)
     {
         _enrollmentRepository = enrollmentRepository;
-        _studentRepository = studentRepository;
         _courseOfferingRepository = courseOfferingRepository;
     }
 
     public async Task<Guid> Handle(EnrollStudentCommand request, CancellationToken cancellationToken)
     {
-        // 1. 学生が存在するか検証
+        // 1. 学生IDの作成（TODO: Phase 8でStudentRegistrations APIを呼び出して存在確認を行う）
         var studentId = new StudentId(request.StudentId);
-        var student = await _studentRepository.GetByIdAsync(studentId, cancellationToken);
-        if (student == null)
-        {
-            throw new NotFoundException($"学生ID {request.StudentId} が見つかりません");
-        }
 
         // 2. コース開講が存在し、アクティブか検証
         var offeringId = new OfferingId(request.OfferingId);
