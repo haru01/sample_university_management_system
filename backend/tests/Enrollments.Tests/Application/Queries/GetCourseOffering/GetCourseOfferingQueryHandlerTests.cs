@@ -2,6 +2,7 @@ using Enrollments.Application.Queries.GetCourseOffering;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enrollments.Tests.Application.Queries.GetCourseOffering;
@@ -9,27 +10,35 @@ namespace Enrollments.Tests.Application.Queries.GetCourseOffering;
 /// <summary>
 /// GetCourseOfferingQueryHandlerのテスト
 /// </summary>
-public class GetCourseOfferingQueryHandlerTests : IDisposable
+public class GetCourseOfferingQueryHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly GetCourseOfferingQueryHandler _handler;
+    private CoursesDbContext _context;
+    private GetCourseOfferingQueryHandler _handler;
+    private SqliteConnection _connection;
 
-    public GetCourseOfferingQueryHandlerTests()
+    public async Task InitializeAsync()
     {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         var courseOfferingRepository = new CourseOfferingRepository(_context);
         var courseRepository = new CourseRepository(_context);
         _handler = new GetCourseOfferingQueryHandler(courseOfferingRepository, courseRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]

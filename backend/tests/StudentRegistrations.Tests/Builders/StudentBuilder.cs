@@ -10,7 +10,7 @@ public class StudentBuilder
 {
     private StudentId _id = StudentId.CreateNew();
     private string _name = "デフォルト名前です";
-    private string _email = "default@example.com";
+    private string _email = $"default-{Guid.NewGuid()}@example.com";
     private int _grade = 1;
 
     public StudentBuilder WithId(Guid id)

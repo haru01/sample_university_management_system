@@ -3,34 +3,43 @@ using StudentRegistrations.Infrastructure.Persistence;
 using StudentRegistrations.Infrastructure.Persistence.Repositories;
 using StudentRegistrations.Tests.Builders;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 
 namespace StudentRegistrations.Tests.Application.Queries.GetStudent;
 
 /// <summary>
 /// GetStudentQueryHandlerのテスト
 /// </summary>
-public class GetStudentQueryHandlerTests : IDisposable
+public class GetStudentQueryHandlerTests : IAsyncLifetime
 {
-    private readonly StudentRegistrationsDbContext _context;
-    private readonly GetStudentQueryHandler _handler;
+    private SqliteConnection _connection;
+    private StudentRegistrationsDbContext _context;
+    private GetStudentQueryHandler _handler;
 
-    public GetStudentQueryHandlerTests()
+    public async Task InitializeAsync()
     {
-        // 各テストごとに新しいDbContextを作成
+        // SQLiteのインメモリーデータベースを使用
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<StudentRegistrationsDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new StudentRegistrationsDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         // ハンドラーの依存関係を初期化
         var studentRepository = new StudentRepository(_context);
         _handler = new GetStudentQueryHandler(studentRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]

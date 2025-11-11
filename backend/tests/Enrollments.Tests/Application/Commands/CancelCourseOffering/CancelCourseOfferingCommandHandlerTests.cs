@@ -3,6 +3,7 @@ using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enrollments.Tests.Application.Commands.CancelCourseOffering;
@@ -10,26 +11,34 @@ namespace Enrollments.Tests.Application.Commands.CancelCourseOffering;
 /// <summary>
 /// CancelCourseOfferingCommandHandlerのテスト
 /// </summary>
-public class CancelCourseOfferingCommandHandlerTests : IDisposable
+public class CancelCourseOfferingCommandHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly CancelCourseOfferingCommandHandler _handler;
+    private CoursesDbContext _context;
+    private CancelCourseOfferingCommandHandler _handler;
+    private SqliteConnection _connection;
 
-    public CancelCourseOfferingCommandHandlerTests()
+    public async Task InitializeAsync()
     {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         var courseOfferingRepository = new CourseOfferingRepository(_context);
         _handler = new CancelCourseOfferingCommandHandler(courseOfferingRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]

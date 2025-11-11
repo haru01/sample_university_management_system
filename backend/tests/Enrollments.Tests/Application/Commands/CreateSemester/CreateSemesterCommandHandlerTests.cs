@@ -3,6 +3,7 @@ using Enrollments.Domain.Exceptions;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enrollments.Tests.Application.Commands.CreateSemester;
@@ -10,28 +11,36 @@ namespace Enrollments.Tests.Application.Commands.CreateSemester;
 /// <summary>
 /// CreateSemesterCommandHandlerのテスト
 /// </summary>
-public class CreateSemesterCommandHandlerTests : IDisposable
+public class CreateSemesterCommandHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly CreateSemesterCommandHandler _handler;
+    private CoursesDbContext _context;
+    private CreateSemesterCommandHandler _handler;
+    private SqliteConnection _connection;
 
-    public CreateSemesterCommandHandlerTests()
+    public async Task InitializeAsync()
     {
         // 各テストごとに新しいDbContextを作成
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         // ハンドラーの依存関係を初期化
         var semesterRepository = new SemesterRepository(_context);
         _handler = new CreateSemesterCommandHandler(semesterRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]
