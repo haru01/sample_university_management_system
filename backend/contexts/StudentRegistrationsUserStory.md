@@ -20,6 +20,18 @@
 | GetStudentQueryHandler | GetStudentQuery | 学生を取得 | ✅ 完了 |
 | UpdateStudentCommandHandler | UpdateStudentCommand | 学生情報を更新 | ✅ 完了 |
 
+### 学生イベント管理 (Phase 2 - 未実装)
+
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| RecordEnrollmentEventCommandHandler | RecordEnrollmentEventCommand | 入学イベントを記録 | ⬜ 未実装 |
+| RecordPromotionEventCommandHandler | RecordPromotionEventCommand | 進級イベントを記録 | ⬜ 未実装 |
+| RecordLeaveEventCommandHandler | RecordLeaveEventCommand | 休学イベントを記録 | ⬜ 未実装 |
+| RecordReinstatementEventCommandHandler | RecordReinstatementEventCommand | 復学イベントを記録 | ⬜ 未実装 |
+| RecordWithdrawalEventCommandHandler | RecordWithdrawalEventCommand | 退学イベントを記録 | ⬜ 未実装 |
+| RecordGraduationEventCommandHandler | RecordGraduationEventCommand | 卒業イベントを記録 | ⬜ 未実装 |
+| GetStudentEventsQueryHandler | GetStudentEventsQuery | 学生のイベント履歴を取得 | ⬜ 未実装 |
+
 ---
 
 TODO: 入学、進級、休学、復学、退学、卒業などの履歴残す。在学中なのか判定できるなにか。
@@ -257,6 +269,264 @@ Scenario: 存在しない学生IDで取得を試みる
 
 ---
 
+### ⬜ US-S05: 学生の入学イベントを記録できる
+
+**ストーリー:**
+API利用者として、学生の入学イベントを記録できるようにしたい。なぜなら、学生の在籍状況の履歴を追跡する必要があるから。
+
+**Handler:** `RecordEnrollmentEventCommandHandler : IRequestHandler<RecordEnrollmentEventCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の入学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  When RecordEnrollmentEventCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - EventType: "Enrollment" (入学)
+    - EventDate: "2024-04-01"
+    - Grade: 1
+    - Remarks: "令和6年度入学"
+  Then 自動生成されたイベントID（Guid）が返される
+  And データベースにイベントが保存されている
+  And イベントタイプが "Enrollment" である
+  And 学年が 1 である
+```
+
+```gherkin
+Scenario: 存在しない学生IDで入学イベントを記録しようとする
+  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
+  When RecordEnrollmentEventCommandを実行する
+    - StudentId: "99999999-9999-9999-9999-999999999999"
+    - EventType: "Enrollment"
+  Then KeyNotFoundException がスローされる
+  And エラーメッセージに "Student not found" が含まれる
+```
+
+**制約:**
+
+- イベントID: UUID形式で自動生成
+- 学生ID: 必須、存在する学生のみ
+- イベント日時: 必須
+- イベントタイプ: Enrollment, Promotion, Leave, Reinstatement, Withdrawal, Graduation のいずれか
+- 備考: オプション
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S06: 学生の進級イベントを記録できる
+
+**ストーリー:**
+API利用者として、学生の進級イベントを記録できるようにしたい。なぜなら、学年の変更履歴を追跡する必要があるから。
+
+**Handler:** `RecordPromotionEventCommandHandler : IRequestHandler<RecordPromotionEventCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の進級を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And 現在の学年が 1 である
+  When RecordPromotionEventCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - EventType: "Promotion" (進級)
+    - EventDate: "2025-04-01"
+    - Grade: 2
+    - Remarks: "2年次進級"
+  Then 自動生成されたイベントID（Guid）が返される
+  And データベースにイベントが保存されている
+  And イベントタイプが "Promotion" である
+  And 進級後の学年が 2 である
+```
+
+**制約:**
+
+- 進級は1学年ずつのみ（1→2, 2→3, 3→4）
+- 学年は1〜4の範囲内
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S07: 学生の休学イベントを記録できる
+
+**ストーリー:**
+API利用者として、学生の休学イベントを記録できるようにしたい。なぜなら、休学期間を追跡し、在籍状況を管理する必要があるから。
+
+**Handler:** `RecordLeaveEventCommandHandler : IRequestHandler<RecordLeaveEventCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の休学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  When RecordLeaveEventCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - EventType: "Leave" (休学)
+    - EventDate: "2024-10-01"
+    - Remarks: "病気療養のため休学"
+  Then 自動生成されたイベントID（Guid）が返される
+  And データベースにイベントが保存されている
+  And イベントタイプが "Leave" である
+```
+
+**制約:**
+
+- 休学理由は備考に記録
+- 休学期間の開始日を記録
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S08: 学生の復学イベントを記録できる
+
+**ストーリー:**
+API利用者として、学生の復学イベントを記録できるようにしたい。なぜなら、休学からの復帰を追跡し、在籍状況を管理する必要があるから。
+
+**Handler:** `RecordReinstatementEventCommandHandler : IRequestHandler<RecordReinstatementEventCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の復学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And 過去に休学イベントが記録されている
+  When RecordReinstatementEventCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - EventType: "Reinstatement" (復学)
+    - EventDate: "2025-04-01"
+    - Remarks: "復学"
+  Then 自動生成されたイベントID（Guid）が返される
+  And データベースにイベントが保存されている
+  And イベントタイプが "Reinstatement" である
+```
+
+**制約:**
+
+- 復学前に休学イベントが存在すること（ビジネスルールとして推奨）
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S09: 学生の退学イベントを記録できる
+
+**ストーリー:**
+API利用者として、学生の退学イベントを記録できるようにしたい。なぜなら、退学による在籍終了を記録し、履歴を保持する必要があるから。
+
+**Handler:** `RecordWithdrawalEventCommandHandler : IRequestHandler<RecordWithdrawalEventCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の退学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  When RecordWithdrawalEventCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - EventType: "Withdrawal" (退学)
+    - EventDate: "2024-12-31"
+    - Remarks: "自己都合退学"
+  Then 自動生成されたイベントID（Guid）が返される
+  And データベースにイベントが保存されている
+  And イベントタイプが "Withdrawal" である
+```
+
+**制約:**
+
+- 退学理由は備考に記録
+- 退学後も学生データは保持（論理削除ではなくイベントで管理）
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S10: 学生の卒業イベントを記録できる
+
+**ストーリー:**
+API利用者として、学生の卒業イベントを記録できるようにしたい。なぜなら、卒業による在籍終了を記録し、履歴を保持する必要があるから。
+
+**Handler:** `RecordGraduationEventCommandHandler : IRequestHandler<RecordGraduationEventCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の卒業を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And 学年が 4 である
+  When RecordGraduationEventCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - EventType: "Graduation" (卒業)
+    - EventDate: "2028-03-31"
+    - Remarks: "令和9年度卒業"
+  Then 自動生成されたイベントID（Guid）が返される
+  And データベースにイベントが保存されている
+  And イベントタイプが "Graduation" である
+```
+
+**制約:**
+
+- 通常は4年生で卒業
+- 卒業後も学生データは保持（論理削除ではなくイベントで管理）
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S11: 学生のイベント履歴を取得できる
+
+**ストーリー:**
+API利用者として、学生のイベント履歴を時系列で取得できるようにしたい。なぜなら、学生の在籍状況の変遷を確認する必要があるから。
+
+**Handler:** `GetStudentEventsQueryHandler : IRequestHandler<GetStudentEventsQuery, List<StudentEventDto>>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生のイベント履歴を取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And 以下のイベントが記録されている
+    | イベントタイプ | イベント日時 | 学年 |
+    | Enrollment | 2024-04-01 | 1 |
+    | Promotion | 2025-04-01 | 2 |
+    | Leave | 2025-10-01 | - |
+  When GetStudentEventsQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then 3件のStudentEventDtoが返される
+  And イベントが日時の昇順でソートされている
+  And 最初のイベントが "Enrollment" である
+  And 最後のイベントが "Leave" である
+```
+
+```gherkin
+Scenario: イベントが記録されていない学生の履歴を取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And イベントが記録されていない
+  When GetStudentEventsQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then 空のリスト（0件）が返される
+```
+
+```gherkin
+Scenario: イベントタイプでフィルタリングして取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の複数のイベントが記録されている
+  When GetStudentEventsQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - EventType: "Promotion"
+  Then "Promotion" タイプのイベントのみが返される
+```
+
+**制約:**
+
+- デフォルトソート: イベント日時の昇順
+- イベントタイプでフィルタリング可能（オプション）
+- ページネーション未実装
+
+**実装状態:** ⬜ 未実装
+
+---
+
 ## ドメインルール・制約まとめ
 
 ### 学生（Student）
@@ -264,6 +534,16 @@ Scenario: 存在しない学生IDで取得を試みる
 - **学生ID**: UUID（自動生成）
 - **メールアドレス**: 一意制約、メール形式
 - **学年**: 1〜4
+
+### 学生イベント（StudentEvent）
+
+- **イベントID**: UUID（自動生成）
+- **学生ID**: 必須、外部キー制約（Student集約への参照）
+- **イベントタイプ**: Enrollment（入学）, Promotion（進級）, Leave（休学）, Reinstatement（復学）, Withdrawal（退学）, Graduation（卒業）のいずれか
+- **イベント日時**: 必須
+- **学年**: イベントタイプがEnrollmentまたはPromotionの場合は必須
+- **備考**: オプション、最大500文字
+- **集約関係**: Student集約のルート、StudentEventは子エンティティ（1対多）
 
 ---
 
@@ -277,6 +557,18 @@ Scenario: 存在しない学生IDで取得を試みる
 - ✅ US-S04: 学生取得（個別学生の在籍情報取得）
 
 **理由**: 最もシンプルで他機能への依存なし。学生の在籍情報管理が全ての履修管理の前提。
+
+### Phase 2: 学生イベント履歴管理（未実装）
+
+- ⬜ US-S05: 入学イベント記録
+- ⬜ US-S06: 進級イベント記録
+- ⬜ US-S07: 休学イベント記録
+- ⬜ US-S08: 復学イベント記録
+- ⬜ US-S09: 退学イベント記録
+- ⬜ US-S10: 卒業イベント記録
+- ⬜ US-S11: 学生イベント履歴取得
+
+**理由**: 学生の在籍状況の変遷を追跡するために必要。Student集約に紐づく履歴管理。
 
 ---
 
