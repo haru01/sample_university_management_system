@@ -7,29 +7,47 @@ C# (.NET 9) + Entity Framework Core + DDD + CQRS パターンによる大学管�
 ```
 backend/
 ├── src/
-│   ├── Shared/                        # 共有カーネル（エンティティ基底クラス等）
-│   └── Enrollments/                   # 履修管理コンテキスト
-│       ├── Domain/                    # ドメイン層
-│       │   ├── CourseAggregate/       # コース集約
-│       │   ├── StudentAggregate/      # 学生集約
-│       │   └── EnrollmentAggregate/   # 履修集約
-│       ├── Application/               # アプリケーション層（CQRS）
-│       │   ├── Commands/              # コマンド（書き込み）
-│       │   └── Queries/               # クエリ（読み取り）
-│       ├── Infrastructure/            # インフラ層
-│       │   └── Persistence/           # EF Core設定、リポジトリ、マイグレーション
-│       └── Api/                       # API層（コントローラー）
+│   ├── Shared/                              # 共有カーネル
+│   │   └── ValueObjects/
+│   │       └── StudentId.cs                 # 学生ID（コンテキスト間で共有）
+│   │
+│   ├── StudentRegistrations/                # 学生在籍管理コンテキスト
+│   │   ├── Domain/
+│   │   │   └── StudentAggregate/
+│   │   ├── Application/
+│   │   │   ├── Commands/
+│   │   │   └── Queries/
+│   │   └── Infrastructure/
+│   │       └── Persistence/
+│   │           └── Migrations/              # Flywayマイグレーション
+│   │
+│   ├── Enrollments/                         # 履修登録管理コンテキスト
+│   │   ├── Domain/
+│   │   │   ├── CourseAggregate/
+│   │   │   ├── SemesterAggregate/
+│   │   │   ├── CourseOfferingAggregate/
+│   │   │   └── EnrollmentAggregate/
+│   │   ├── Application/
+│   │   │   ├── Commands/
+│   │   │   ├── Queries/
+│   │   │   └── Services/                    # ACL (StudentRegistrations統合)
+│   │   └── Infrastructure/
+│   │       └── Persistence/
+│   │           └── Migrations/              # Flywayマイグレーション
+│   │
+│   └── Api/                                 # 統合API (全コンテキスト)
+│       ├── Controllers/
+│       │   ├── StudentsController.cs
+│       │   ├── CoursesController.cs
+│       │   ├── SemestersController.cs
+│       │   ├── CourseOfferingsController.cs
+│       │   └── EnrollmentsController.cs
+│       └── Program.cs
+│
 └── tests/
-    └── Enrollments.Tests/             # テストプロジェクト（xUnit）
+    ├── StudentRegistrations.Tests/
+    └── Enrollments.Tests/
 ```
-
-## 実装済み機能
-
-### コース管理API
-
-- **POST /api/courses** - コース登録
-- **GET /api/courses** - コース一覧取得
-- **GET /api/courses/{code}** - コース単件取得
 
 ## クイックスタート
 

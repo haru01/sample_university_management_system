@@ -28,18 +28,13 @@ UniversityManagement/
 │   │   │   └── Queries/
 │   │   │       ├── GetStudent/
 │   │   │       └── SelectStudents/
-│   │   ├── Infrastructure/
-│   │   │   ├── Persistence/
-│   │   │   │   ├── StudentRegistrationsDbContext.cs
-│   │   │   │   ├── Configurations/
-│   │   │   │   ├── Repositories/
-│   │   │   │   └── Migrations/
-│   │   │   │       └── V1__Create_Students.sql
-│   │   │   └── Services/
-│   │   └── Api/
-│   │       ├── Controllers/
-│   │       │   └── StudentsController.cs
-│   │       └── Program.cs
+│   │   └── Infrastructure/
+│   │       └── Persistence/
+│   │           ├── StudentRegistrationsDbContext.cs
+│   │           ├── Configurations/
+│   │           ├── Repositories/
+│   │           └── Migrations/
+│   │               └── V1__Create_Students.sql
 │   │
 │   ├── Enrollments/                   # 履修登録管理コンテキスト
 │   │   ├── Domain/
@@ -68,22 +63,23 @@ UniversityManagement/
 │   │   │   ├── Queries/
 │   │   │   │   └── GetStudentEnrollments/
 │   │   │   └── Services/
-│   │   │       └── IStudentServiceClient.cs  # ACL: StudentRegistrations APIクライアント
-│   │   ├── Infrastructure/
-│   │   │   ├── Persistence/
-│   │   │   │   ├── CoursesDbContext.cs
-│   │   │   │   ├── Configurations/
-│   │   │   │   ├── Repositories/
-│   │   │   │   └── Migrations/
-│   │   │   │       └── V7__Migrate_Students_To_StudentRegistrations.sql
-│   │   │   └── Services/
-│   │   │       └── StudentServiceClient.cs   # ACL実装（HTTP経由）
-│   │   └── Api/
-│   │       ├── Controllers/
-│   │       │   ├── EnrollmentsController.cs
-│   │       │   ├── CoursesController.cs
-│   │       │   └── SemestersController.cs
-│   │       └── Program.cs
+│   │   │       └── IStudentServiceClient.cs  # ACL: StudentRegistrations統合
+│   │   └── Infrastructure/
+│   │       └── Persistence/
+│   │           ├── CoursesDbContext.cs
+│   │           ├── Configurations/
+│   │           ├── Repositories/
+│   │           └── Migrations/
+│   │               └── V7__Migrate_Students_To_StudentRegistrations.sql
+│   │
+│   ├── Api/                           # 統合API（全コンテキスト）
+│   │   ├── Controllers/
+│   │   │   ├── StudentsController.cs
+│   │   │   ├── CoursesController.cs
+│   │   │   ├── SemestersController.cs
+│   │   │   ├── CourseOfferingsController.cs
+│   │   │   └── EnrollmentsController.cs
+│   │   └── Program.cs
 │   │
 │   ├── Attendances/                   # 出席管理コンテキスト（未実装）
 │   └── Grading/                       # 成績評価コンテキスト（未実装）
