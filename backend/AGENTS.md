@@ -104,7 +104,6 @@ UniversityManagement/
 - レイヤーアーキテクチャと依存関係
 - 集約設計ルール
 - CQRS パターン
-- イベント駆動アーキテクチャ
 
 ### 🏛️ [Domain層 実装パターン](contexts/impl-patterns/domain-layer-patterns.md)
 - エンティティ / 集約ルート
@@ -118,7 +117,6 @@ UniversityManagement/
 
 - Command/Query インターフェース（CQRS）
 - CommandHandler / QueryHandler（MediatR）
-- FluentValidation によるバリデーション
 - トランザクション管理
 - 例外ハンドリング
 
@@ -436,7 +434,7 @@ Enrollments.EnrollStudentCommandHandler
 
 ## AIエージェントへのガイダンス
 
-この Claude.md とcontexts配下のドキュメントにより、AIエージェントは：
+この AGENTS.md とcontexts配下のドキュメントにより、AIエージェントは：
 
 - ✅ プロジェクトの全体構造を理解
 - ✅ 各層の責務と実装パターンを把握
