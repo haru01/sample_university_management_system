@@ -1,0 +1,32 @@
+{
+  "name": "university-management-backend",
+  "version": "1.0.0",
+  "description": "University Management System Backend API",
+  "scripts": {
+    "up": "docker-compose up -d && npm run _info",
+    "down": "docker-compose down",
+    "restart": "docker-compose restart",
+    "rebuild": "docker-compose down && docker-compose up -d --build",
+    "clean": "docker-compose down -v",
+    "ps": "docker-compose ps",
+    "logs": "docker-compose logs -f",
+    "logs:api": "docker-compose logs -f api",
+    "logs:db": "docker-compose logs -f postgres",
+    "logs:migrate": "docker-compose logs flyway-student-registrations flyway-enrollments",
+    "swagger": "node -e \"require('child_process').exec(process.platform === 'win32' ? 'start http://localhost:8080/index.html' : process.platform === 'darwin' ? 'open http://localhost:8080/index.html' : 'xdg-open http://localhost:8080/index.html')\"",
+    "sample": "node scripts/sample-data.js",
+    "test:unit": "dotnet test",
+    "test:coverage": "dotnet test --collect:\"XPlat Code Coverage\"",
+    "coverage:report": "dotnet test --collect:\"XPlat Code Coverage\" && reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coverage-report -reporttypes:Html;TextSummary",
+    "coverage:open": "node -e \"require('child_process').exec(process.platform === 'win32' ? 'start coverage-report/index.html' : process.platform === 'darwin' ? 'open coverage-report/index.html' : 'xdg-open coverage-report/index.html')\"",
+    "build": "dotnet build",
+    "build:release": "dotnet build -c Release",
+    "format": "dotnet format",
+    "format:check": "dotnet format --verify-no-changes",
+    "restore": "dotnet restore",
+    "_info": "node -e \"console.log('\\n✅ Docker environment started!\\n\\n📝 API: http://localhost:8080\\n📚 Swagger UI: http://localhost:8080/index.html\\n🗄️  PostgreSQL: localhost:5432\\n')\""
+  },
+  "keywords": ["university", "management", "api", "ddd", "cqrs"],
+  "author": "",
+  "license": "MIT"
+}

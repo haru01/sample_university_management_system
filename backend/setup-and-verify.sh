@@ -30,8 +30,8 @@ echo -e "${YELLOW}[Step 1/2] クリーンアップ & リビルド${NC}"
 echo "既存環境を削除して、ゼロからDockerを構築します..."
 echo ""
 
-make clean
-make rebuild
+npm run clean
+npm run rebuild
 
 echo -e "${GREEN}✓ 環境構築が完了しました${NC}"
 echo ""
@@ -49,7 +49,7 @@ attempt=0
 
 while [ $attempt -lt $max_attempts ]; do
     if curl -s http://localhost:8080/health > /dev/null 2>&1 || \
-       curl -s http://localhost:8080/swagger/index.html > /dev/null 2>&1; then
+       curl -s http://localhost:8080/index.html > /dev/null 2>&1; then
         echo -e "${GREEN}✓ APIサーバーが起動しました${NC}"
         break
     fi
@@ -60,16 +60,16 @@ done
 
 if [ $attempt -eq $max_attempts ]; then
     echo -e "${RED}✗ APIサーバーの起動がタイムアウトしました${NC}"
-    echo "APIログを確認してください: make api-logs"
+    echo "APIログを確認してください: npm run logs:api"
     exit 1
 fi
 echo ""
 
 # Swagger UI確認
 echo -e "${CYAN}[1] Swagger UI 確認${NC}"
-if curl -s http://localhost:8080/swagger/index.html > /dev/null 2>&1; then
+if curl -s http://localhost:8080/index.html > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Swagger UI が利用可能です${NC}"
-    echo "   URL: http://localhost:8080/swagger"
+    echo "   URL: http://localhost:8080/index.html"
 else
     echo -e "${RED}✗ Swagger UI にアクセスできません${NC}"
 fi
@@ -682,15 +682,15 @@ echo ""
 echo -e "${CYAN}📚 次のステップ:${NC}"
 echo ""
 echo "  Swagger UI でAPIを確認:"
-echo "    http://localhost:8080/swagger"
+echo "    http://localhost:8080/index.html"
 echo ""
 echo "  利用可能なコマンド:"
-echo "    make ps          - コンテナの状態確認"
-echo "    make logs        - 全ログを表示"
-echo "    make api-logs    - APIログのみ表示"
-echo "    make down        - 環境を停止"
-echo "    make restart     - 環境を再起動"
-echo "    make clean       - 環境停止 + データ削除"
+echo "    npm run ps          - コンテナの状態確認"
+echo "    npm run logs        - 全ログを表示"
+echo "    npm run logs:api    - APIログのみ表示"
+echo "    npm run down        - 環境を停止"
+echo "    npm run restart     - 環境を再起動"
+echo "    npm run clean       - 環境停止 + データ削除"
 echo ""
-echo -e "${YELLOW}停止する場合: make down${NC}"
+echo -e "${YELLOW}停止する場合: npm run down${NC}"
 echo ""

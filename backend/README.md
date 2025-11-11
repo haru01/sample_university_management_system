@@ -31,69 +31,38 @@ backend/
 - **GET /api/courses** - コース一覧取得
 - **GET /api/courses/{code}** - コース単件取得
 
-## セットアップ（Docker環境）
+## クイックスタート
 
 ### 前提条件
 
 - **Docker Desktop** がインストールされていること
-- **Make** がインストールされていること（オプション）
+- **Node.js** (v18以上) がインストールされていること
 
-### 環境構築手順
-
-#### 1. データベース接続情報の設定
-
-**重要: セキュリティのため、データベース認証情報は環境変数で管理します。**
+### 起動手順
 
 ```bash
-# .env.example をコピーして .env ファイルを作成
-cp .env.example .env
+# 1. Docker環境起動（PostgreSQL + Flyway + API）
+npm run up
 
-# .env ファイルを編集してパスワードを設定
-# DATABASE_CONNECTION_STRING=Host=localhost;Port=5432;Database=university_management;Username=postgres;Password=your_secure_password
-```
+# または docker-compose を直接使用
+docker-compose up -d
 
-または、環境変数を直接設定:
-
-```bash
-# bashの場合
-export DATABASE_CONNECTION_STRING="Host=localhost;Port=5432;Database=university_management;Username=postgres;Password=your_password"
-
-# PowerShellの場合
-$env:DATABASE_CONNECTION_STRING="Host=localhost;Port=5432;Database=university_management;Username=postgres;Password=your_password"
-```
-
-**注意**:
-- `.env` ファイルは `.gitignore` に登録済みのため、誤ってコミットされることはありません
-- 本番環境では必ず強力なパスワードを使用してください
-- デフォルトの `postgres/postgres` は開発環境専用です
-
-#### 2. Docker環境起動
-
-```bash
-# Docker環境起動（PostgreSQL + Flyway + API）
-make up
-
-# または makeを使わない場合
-docker-compose up -d --build
-
-# 3. ブラウザでSwagger UIを開く
-make swagger
-
-# または直接ブラウザで開く
-open http://localhost:8080/swagger
+# 2. ブラウザでSwagger UIを開く
+npm run swagger
+# または: http://localhost:8080/index.html を直接開く
 ```
 
 起動後、以下のURLで各サービスにアクセスできます:
 
 - **API**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger
+- **Swagger UI**: http://localhost:8080/index.html
 - **PostgreSQL**: localhost:5432
 
 ### 動作確認
 
 ```bash
 # サンプルデータを投入してAPIをテスト
-make test
+npm run sample
 
 # または手動でテスト
 curl -X POST http://localhost:8080/api/courses \
@@ -108,38 +77,42 @@ curl http://localhost:8080/api/courses
 
 ```bash
 # 環境を停止
-make down
+npm run down
 
 # 環境を停止 + データベースをリセット
-make clean
+npm run clean
 ```
 
-## 開発コマンド（Make）
+## 開発コマンド
+
+### 環境管理
 
 ```bash
-# 環境管理
-make up               # Docker環境を起動
-make down             # Docker環境を停止
-make restart          # Docker環境を再起動
-make rebuild          # Docker環境をリビルド + 起動
-make clean            # Docker環境を停止 + ボリューム削除（DBリセット）
-
-# ログ・モニタリング
-make logs             # 全サービスのログを表示
-make api-logs         # APIのログのみ表示
-make db-logs          # PostgreSQLのログのみ表示
-make migrate-logs     # Flywayマイグレーションのログを表示
-make ps               # コンテナの状態を確認
-
-# テスト・開発
-make swagger          # Swagger UIを開く
-make test             # サンプルデータでAPIをテスト
-
-# ヘルプ
-make help             # 全コマンド一覧表示
+npm run up            # Docker環境を起動
+npm run down          # Docker環境を停止
+npm run restart       # Docker環境を再起動
+npm run rebuild       # Docker環境をリビルド + 起動
+npm run clean         # Docker環境を停止 + ボリューム削除（DBリセット）
+npm run ps            # コンテナの状態を確認
 ```
 
-### makeを使わない場合
+### ログ・モニタリング
+
+```bash
+npm run logs          # 全サービスのログを表示
+npm run logs:api      # APIのログのみ表示
+npm run logs:db       # PostgreSQLのログのみ表示
+npm run logs:migrate  # Flywayマイグレーションのログを表示
+```
+
+### テスト・開発
+
+```bash
+npm run swagger       # Swagger UIを開く
+npm run sample        # サンプルデータでAPIをテスト
+```
+
+### docker-composeを直接使用する場合
 
 ```bash
 # 環境起動
@@ -204,141 +177,51 @@ curl http://localhost:8080/api/courses/CS101
 - **xUnit** - テストフレームワーク
 - **PostgreSQL 16** - データベース
 
-## 開発ガイドライン
+## 開発者向け情報
 
-### ローカル開発環境のセットアップ
+### データベースマイグレーション
 
-Docker環境以外でローカル開発する場合:
+マイグレーションはFlywayを使用してDocker起動時に自動実行されます。
 
-```bash
-# 1. 環境変数を設定
-export DATABASE_CONNECTION_STRING="Host=localhost;Port=5432;Database=university_management;Username=postgres;Password=your_password"
-
-# 2. データベースを起動（PostgreSQLのみ）
-docker-compose up -d postgres
-
-# 3. APIをローカルで実行
-cd src/Enrollments/Api
-dotnet run
-
-# APIは http://localhost:5000 で起動します
-```
+- マイグレーションファイル: `src/Enrollments/Infrastructure/Persistence/Migrations/`
+- ログ確認: `npm run logs:migrate`
 
 ### ビルド・テスト
 
 ```bash
+# パッケージ復元
+npm run restore
+
 # ソリューション全体のビルド
-dotnet build
+npm run build
+
+# Release構成でビルド
+npm run build:release
 
 # 全テスト実行
-dotnet test
+npm run test:unit
 
 # 特定コンテキストのテスト
 dotnet test tests/Enrollments.Tests
 
 # カバレッジ収集
-dotnet test --collect:"XPlat Code Coverage"
+npm run test:coverage
+
+# カバレッジレポート生成
+npm run coverage:report
+
+# レポートを開く
+npm run coverage:open
 ```
 
 ### コード品質
 
 ```bash
 # コードフォーマットチェック
-dotnet format --verify-no-changes
+npm run format:check
 
 # コードフォーマット適用
-dotnet format
-```
-
-### マイグレーション（Flyway）
-
-```bash
-# マイグレーション情報確認
-flyway info -configFiles=flyway.conf
-
-# マイグレーション実行
-flyway migrate -configFiles=flyway.conf
-
-# マイグレーション検証
-flyway validate -configFiles=flyway.conf
-```
-
-マイグレーションファイルは `src/Enrollments/Infrastructure/Persistence/Migrations/` に配置します。
-
-## セキュリティ設定
-
-### 環境変数の管理
-
-本プロジェクトでは、機密情報（データベース認証情報など）を環境変数で管理します。
-
-**開発環境**:
-
-```bash
-# .envファイルを使用（推奨）
-cp .env.example .env
-# .envファイルを編集してパスワードを設定
-```
-
-**本番環境**:
-
-```bash
-# CI/CDパイプラインでsecretから環境変数を注入
-# 例: GitHub Actions
-env:
-  DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
-
-# 例: Kubernetes
-# ConfigMapやSecretから環境変数を注入
-```
-
-### 重要な注意事項
-
-⚠️ **絶対にやってはいけないこと**:
-
-- `appsettings.json` に本番環境のパスワードを記載してコミット
-- `.env` ファイルをGitにコミット（`.gitignore`で除外済み）
-- デフォルトパスワード `postgres/postgres` を本番環境で使用
-
-✅ **推奨される方法**:
-
-- 環境変数 `DATABASE_CONNECTION_STRING` を使用
-- 本番環境では強力なパスワードを使用
-- CI/CDツールのsecret管理機能を活用
-
-## 本番環境へのデプロイ
-
-### 環境変数の設定例
-
-**Docker**:
-
-```bash
-docker run -e DATABASE_CONNECTION_STRING="Host=db;Port=5432;Database=university_management;Username=app_user;Password=${SECURE_PASSWORD}" your-image
-```
-
-**Kubernetes**:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: db-secret
-type: Opaque
-stringData:
-  connection-string: "Host=db;Port=5432;Database=university_management;Username=app_user;Password=xxx"
----
-apiVersion: apps/v1
-kind: Deployment
-spec:
-  template:
-    spec:
-      containers:
-      - name: api
-        env:
-        - name: DATABASE_CONNECTION_STRING
-          valueFrom:
-            secretKeyRef:
-              name: db-secret
-              key: connection-string
+npm run format
 ```
 
 ## ライセンス

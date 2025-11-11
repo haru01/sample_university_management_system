@@ -90,8 +90,11 @@ mono_crash.*
 
 # Test Coverage
 coverage/
+coverage-report/
+TestResults/
 *.coverage
 *.coveragexml
+**/coverage.cobertura.xml
 
 # Database
 *.db

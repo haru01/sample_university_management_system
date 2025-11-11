@@ -1,8 +1,9 @@
 # University Management System - アーキテクチャコンテキスト
 
 ## システム概要
+
 大学の履修管理・出席管理・成績評価を統合管理するシステム。
-C# (.NET 8) + Entity Framework Core + DDD + レイヤーアーキテクチャ + CQRS パターンを採用。
+C# (.NET 9) + Entity Framework Core + DDD + レイヤーアーキテクチャ + CQRS パターンを採用。
 
 ## プロジェクト構造
 ```
@@ -223,10 +224,12 @@ public class GlobalExceptionMiddleware
 
 ```bash
 # ソリューション全体のビルド
-dotnet build
+npm run build
+# または: dotnet build
 
 # Release構成でビルド
-dotnet build -c Release
+npm run build:release
+# または: dotnet build -c Release
 
 # 特定プロジェクトのビルド
 dotnet build src/Enrollments/Api
@@ -242,13 +245,21 @@ dotnet build --no-incremental
 
 ```bash
 # 全テスト実行
-dotnet test
+npm run test:unit
+# または: dotnet test
 
 # 特定コンテキストのテスト実行
 dotnet test tests/Enrollments.Tests
 
-# カバレッジ収集（coverlet使用）
-dotnet test --collect:"XPlat Code Coverage"
+# カバレッジ収集（XML形式）
+npm run test:coverage
+# または: dotnet test --collect:"XPlat Code Coverage"
+
+# カバレッジ収集 + HTMLレポート生成
+npm run coverage:report
+
+# HTMLレポートを開く
+npm run coverage:open
 
 # 詳細ログ出力
 dotnet test --logger "console;verbosity=detailed"
@@ -261,14 +272,23 @@ dotnet test --filter "FullyQualifiedName=Enrollments.Tests.Domain.EnrollmentTest
 dotnet test -- RunConfiguration.MaxCpuCount=1
 ```
 
+**カバレッジレポートの前提条件**:
+
+```bash
+# ReportGeneratorをインストール（初回のみ）
+dotnet tool install -g dotnet-reportgenerator-globaltool
+```
+
 ### リント・コード品質チェック
 
 ```bash
-# コードフォーマットチェック（.NET 6+）
-dotnet format --verify-no-changes
+# コードフォーマットチェック
+npm run format:check
+# または: dotnet format --verify-no-changes
 
 # コードフォーマット自動適用
-dotnet format
+npm run format
+# または: dotnet format
 
 # 特定プロジェクトのみフォーマット
 dotnet format src/Enrollments/Api
@@ -285,21 +305,14 @@ dotnet list package --outdated
 
 このプロジェクトではデータベーススキーマ管理に **Flyway** を使用します。
 
+マイグレーションはDocker起動時に自動実行されます。
+
 ```bash
-# マイグレーション情報確認
-flyway info -configFiles=flyway.conf
+# マイグレーションログ確認
+npm run logs:migrate
 
-# マイグレーション実行
-flyway migrate -configFiles=flyway.conf
-
-# マイグレーション検証
-flyway validate -configFiles=flyway.conf
-
-# マイグレーション履歴クリア（開発環境のみ）
-flyway clean -configFiles=flyway.conf
-
-# 最新マイグレーションのロールバック（Flywayコマーシャル版のみ）
-flyway undo -configFiles=flyway.conf
+# 環境を再起動してマイグレーションを再実行
+npm run restart
 ```
 
 **マイグレーションファイル作成例**:
@@ -310,29 +323,32 @@ flyway undo -configFiles=flyway.conf
 # V3__Add_Student_Email_Unique.sql
 ```
 
+新しいマイグレーションファイルを追加した後は `npm run restart` で自動的に適用されます。
+
 詳細は [Infrastructure層パターン - マイグレーション](contexts/infrastructure-layer-patterns.md#マイグレーションflyway) を参照。
 
 ### アプリケーション実行
 
 ```bash
-# 1. 際ビルドしてDocker環境起動（PostgreSQL + Flyway + API）
-make rebuild
+# 1. Docker環境起動（PostgreSQL + Flyway + API）
+npm run up
 
-# または makeを使わない場合
-docker-compose up -d --build
+# または再ビルドして起動
+npm run rebuild
 
 # 2. ブラウザでSwagger UIを開く
-make swagger
+npm run swagger
 
 # または直接ブラウザで開く
-open http://localhost:8080/swagger
+open http://localhost:8080/index.html
 ```
 
 ### パッケージ管理
 
 ```bash
 # NuGetパッケージ復元
-dotnet restore
+npm run restore
+# または: dotnet restore
 
 # パッケージ追加
 dotnet add src/Enrollments/Api package Swashbuckle.AspNetCore
@@ -347,17 +363,23 @@ dotnet list package
 ### CI/CD向けコマンド例
 
 ```bash
-# クリーンビルド + テスト + カバレッジ
+# クリーンビルド + テスト + カバレッジ（npm scripts使用）
+npm run restore && \
+npm run build:release && \
+npm run test:coverage && \
+npm run format:check
+
+# 全てを一括実行（開発時チェック）
+npm run restore && \
+npm run build && \
+npm run format:check && \
+npm run test:unit
+
+# または dotnet コマンドで直接実行
 dotnet clean && \
 dotnet build -c Release /p:TreatWarningsAsErrors=true && \
 dotnet test --no-build -c Release --collect:"XPlat Code Coverage" && \
 dotnet format --verify-no-changes
-
-# 全てを一括実行（開発時チェック）
-dotnet restore && \
-dotnet build && \
-dotnet format --verify-no-changes && \
-dotnet test --logger "console;verbosity=normal"
 ```
 
 ## 注意事項
