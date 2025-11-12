@@ -2,7 +2,6 @@ using Enrollments.Application.Commands.CreateSemester;
 using Enrollments.Application.Queries.GetCurrentSemester;
 using Enrollments.Application.Queries.SelectSemesters;
 using Enrollments.Application.Queries.Semesters;
-using Enrollments.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,12 +40,6 @@ public class SemestersController : ControllerBase
     {
         var query = new GetCurrentSemesterQuery();
         var semester = await _mediator.Send(query, cancellationToken);
-
-        if (semester is null)
-        {
-            return NotFound(new { message = "No current semester found" });
-        }
-
         return Ok(semester);
     }
 
@@ -61,34 +54,19 @@ public class SemestersController : ControllerBase
         [FromBody] CreateSemesterRequest request,
         CancellationToken cancellationToken)
     {
-        try
+        var command = new CreateSemesterCommand
         {
-            var command = new CreateSemesterCommand
-            {
-                Year = request.Year,
-                Period = request.Period,
-                StartDate = request.StartDate,
-                EndDate = request.EndDate
-            };
+            Year = request.Year,
+            Period = request.Period,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate
+        };
 
-            var semesterId = await _mediator.Send(command, cancellationToken);
+        var semesterId = await _mediator.Send(command, cancellationToken);
 
-            return CreatedAtAction(
-                nameof(GetSemesters),
-                new CreateSemesterResponse(semesterId.Year, semesterId.Period));
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (ConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return CreatedAtAction(
+            nameof(GetSemesters),
+            new CreateSemesterResponse(semesterId.Year, semesterId.Period));
     }
 }
 

@@ -4,7 +4,6 @@ using StudentRegistrations.Application.Commands.DeleteStudent;
 using StudentRegistrations.Application.Queries.GetStudent;
 using StudentRegistrations.Application.Queries.SelectStudents;
 using StudentRegistrations.Application.Queries.Students;
-using StudentRegistrations.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -55,30 +54,19 @@ public class StudentsController : ControllerBase
         [FromBody] CreateStudentRequest request,
         CancellationToken cancellationToken)
     {
-        try
+        var command = new CreateStudentCommand
         {
-            var command = new CreateStudentCommand
-            {
-                Name = request.Name,
-                Email = request.Email,
-                Grade = request.Grade
-            };
+            Name = request.Name,
+            Email = request.Email,
+            Grade = request.Grade
+        };
 
-            var studentId = await _mediator.Send(command, cancellationToken);
+        var studentId = await _mediator.Send(command, cancellationToken);
 
-            return CreatedAtAction(
-                nameof(GetStudent),
-                new { studentId = studentId },
-                new CreateStudentResponse(studentId));
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (ConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
+        return CreatedAtAction(
+            nameof(GetStudent),
+            new { studentId = studentId },
+            new CreateStudentResponse(studentId));
     }
 
     /// <summary>
@@ -89,16 +77,9 @@ public class StudentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<StudentDto>> GetStudent(Guid studentId, CancellationToken cancellationToken)
     {
-        try
-        {
-            var query = new GetStudentQuery { StudentId = studentId };
-            var student = await _mediator.Send(query, cancellationToken);
-            return Ok(student);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var query = new GetStudentQuery { StudentId = studentId };
+        var student = await _mediator.Send(query, cancellationToken);
+        return Ok(student);
     }
 
     /// <summary>
@@ -114,32 +95,17 @@ public class StudentsController : ControllerBase
         [FromBody] UpdateStudentRequest request,
         CancellationToken cancellationToken)
     {
-        try
+        var command = new UpdateStudentCommand
         {
-            var command = new UpdateStudentCommand
-            {
-                StudentId = studentId,
-                Name = request.Name,
-                Email = request.Email,
-                Grade = request.Grade
-            };
+            StudentId = studentId,
+            Name = request.Name,
+            Email = request.Email,
+            Grade = request.Grade
+        };
 
-            await _mediator.Send(command, cancellationToken);
+        await _mediator.Send(command, cancellationToken);
 
-            return NoContent();
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (ConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
+        return NoContent();
     }
 
     /// <summary>
@@ -152,16 +118,9 @@ public class StudentsController : ControllerBase
         Guid studentId,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var command = new DeleteStudentCommand { StudentId = studentId };
-            await _mediator.Send(command, cancellationToken);
-            return NoContent();
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var command = new DeleteStudentCommand { StudentId = studentId };
+        await _mediator.Send(command, cancellationToken);
+        return NoContent();
     }
 }
 

@@ -26,38 +26,23 @@ public class ClassSessionsController : ControllerBase
         [FromBody] CreateClassSessionRequest request,
         CancellationToken cancellationToken)
     {
-        try
+        var command = new CreateClassSessionCommand
         {
-            var command = new CreateClassSessionCommand
-            {
-                OfferingId = request.OfferingId,
-                SessionNumber = request.SessionNumber,
-                SessionDate = request.SessionDate,
-                StartTime = request.StartTime,
-                EndTime = request.EndTime,
-                Location = request.Location,
-                Topic = request.Topic
-            };
+            OfferingId = request.OfferingId,
+            SessionNumber = request.SessionNumber,
+            SessionDate = request.SessionDate,
+            StartTime = request.StartTime,
+            EndTime = request.EndTime,
+            Location = request.Location,
+            Topic = request.Topic
+        };
 
-            var sessionId = await _mediator.Send(command, cancellationToken);
+        var sessionId = await _mediator.Send(command, cancellationToken);
 
-            return CreatedAtAction(
-                nameof(CreateClassSession),
-                new { id = sessionId },
-                new CreateClassSessionResponse(sessionId));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return CreatedAtAction(
+            nameof(CreateClassSession),
+            new { id = sessionId },
+            new CreateClassSessionResponse(sessionId));
     }
 }
 
