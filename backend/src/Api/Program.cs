@@ -1,6 +1,9 @@
 using System.Reflection;
 using Api.Middleware;
 using Api.Services;
+using Attendance.Domain.ClassSessionAggregate;
+using Attendance.Infrastructure.Persistence;
+using Attendance.Infrastructure.Persistence.Repositories;
 using Enrollments.Application.Services;
 using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.CourseOfferingAggregate;
@@ -58,6 +61,11 @@ builder.Services.AddDbContext<CoursesDbContext>(options =>
     options.UseNpgsql(coursesConnectionString, npgsqlOptions =>
         npgsqlOptions.EnableRetryOnFailure()));
 
+// Database - Attendance (同じCoursesデータベースを使用)
+builder.Services.AddDbContext<AttendanceDbContext>(options =>
+    options.UseNpgsql(coursesConnectionString, npgsqlOptions =>
+        npgsqlOptions.EnableRetryOnFailure()));
+
 // PostgreSQL: DateTimeをUTCとして扱う設定
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", false);
 
@@ -70,6 +78,9 @@ builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICourseOfferingRepository, CourseOfferingRepository>();
 builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 
+// Repositories - Attendance
+builder.Services.AddScoped<IClassSessionRepository, ClassSessionRepository>();
+
 // Student Service - 統合API内でリポジトリ経由で直接アクセス
 // HTTP経由のACLは不要（同一プロセス内）
 builder.Services.AddScoped<IStudentServiceClient, DirectStudentServiceClient>();
@@ -79,6 +90,7 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(Assembly.Load("StudentRegistrations.Application"));
     cfg.RegisterServicesFromAssembly(Assembly.Load("Enrollments.Application"));
+    cfg.RegisterServicesFromAssembly(Assembly.Load("Attendance.Application"));
 });
 
 var app = builder.Build();

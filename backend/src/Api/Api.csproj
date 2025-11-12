@@ -21,6 +21,9 @@
     <ProjectReference Include="..\Enrollments\Domain\Enrollments.Domain.csproj" />
     <ProjectReference Include="..\Enrollments\Application\Enrollments.Application.csproj" />
     <ProjectReference Include="..\Enrollments\Infrastructure\Enrollments.Infrastructure.csproj" />
+    <ProjectReference Include="..\Attendance\Domain\Attendance.Domain.csproj" />
+    <ProjectReference Include="..\Attendance\Application\Attendance.Application.csproj" />
+    <ProjectReference Include="..\Attendance\Infrastructure\Attendance.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

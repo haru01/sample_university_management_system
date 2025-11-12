@@ -63,7 +63,32 @@ services:
     networks:
       - university_network
 
-  # Unified Backend API (両コンテキストを含む)
+  # Flywayマイグレーション（Attendance） - Enrollmentsと同じディレクトリを使用
+  flyway-attendance:
+    image: flyway/flyway:10-alpine
+    platform: linux/amd64
+    container_name: university_flyway_attendance
+    command: migrate
+    volumes:
+      - ./src/Enrollments/Infrastructure/Persistence/Migrations:/flyway/sql/enrollments
+      - ./src/Attendance/Infrastructure/Persistence/Migrations:/flyway/sql/attendance
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/university_management
+      FLYWAY_USER: postgres
+      FLYWAY_PASSWORD: postgres
+      FLYWAY_SCHEMAS: courses
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql/enrollments,filesystem:/flyway/sql/attendance
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_VALIDATE_ON_MIGRATE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      flyway-enrollments:
+        condition: service_completed_successfully
+    networks:
+      - university_network
+
+  # Unified Backend API (全コンテキストを含む)
   api:
     build:
       context: .
@@ -77,7 +102,7 @@ services:
       ConnectionStrings__CoursesDb: "Host=postgres;Port=5432;Database=university_management;Username=postgres;Password=postgres"
       ConnectionStrings__StudentRegistrationsDb: "Host=postgres;Port=5432;Database=university_management;Username=postgres;Password=postgres"
     depends_on:
-      flyway-enrollments:
+      flyway-attendance:
         condition: service_completed_successfully
     networks:
       - university_network

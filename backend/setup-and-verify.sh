@@ -667,6 +667,122 @@ else
 fi
 
 # ========================================
+# ClassSession (Attendance)関連のテスト
+# ========================================
+echo -e "${YELLOW}=== ClassSession (Attendance) API Tests ===${NC}"
+echo ""
+
+# 授業セッション作成の前提: Offering IDを取得
+if [ -n "$offering_id" ] && [ "$offering_id" != "null" ]; then
+
+    # 授業セッション作成テスト
+    echo -e "${CYAN}[28] POST /api/classsessions (授業セッションを作成)${NC}"
+    session_create_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/classsessions \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"offeringId\": $offering_id,
+        \"sessionNumber\": 1,
+        \"sessionDate\": \"2024-04-10\",
+        \"startTime\": \"09:00:00\",
+        \"endTime\": \"10:30:00\",
+        \"location\": \"A棟201教室\",
+        \"topic\": \"プログラミング基礎：変数とデータ型\"
+      }")
+
+    session_create_status=$(echo "$session_create_response" | tail -n 1)
+    session_create_body=$(echo "$session_create_response" | sed '$d')
+
+    if [ "$session_create_status" = "201" ] || [ "$session_create_status" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $session_create_status - 授業セッションを作成しました${NC}"
+        session_id=$(echo "$session_create_body" | jq -r '.sessionId' 2>/dev/null)
+        if [ -n "$session_id" ] && [ "$session_id" != "null" ]; then
+            echo "Session ID: $session_id"
+        fi
+        echo "$session_create_body" | jq '.' 2>/dev/null
+    else
+        echo -e "${YELLOW}⚠ HTTP $session_create_status${NC}"
+        echo "$session_create_body"
+    fi
+    echo ""
+
+    # 2つ目の授業セッション作成テスト
+    echo -e "${CYAN}[29] POST /api/classsessions (2つ目の授業セッションを作成)${NC}"
+    session_create_response2=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/classsessions \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"offeringId\": $offering_id,
+        \"sessionNumber\": 2,
+        \"sessionDate\": \"2024-04-17\",
+        \"startTime\": \"09:00:00\",
+        \"endTime\": \"10:30:00\",
+        \"location\": \"A棟201教室\",
+        \"topic\": \"プログラミング基礎：制御構造\"
+      }")
+
+    session_create_status2=$(echo "$session_create_response2" | tail -n 1)
+    session_create_body2=$(echo "$session_create_response2" | sed '$d')
+
+    if [ "$session_create_status2" = "201" ] || [ "$session_create_status2" = "200" ]; then
+        echo -e "${GREEN}✓ HTTP $session_create_status2 - 2つ目の授業セッションを作成しました${NC}"
+        session_id2=$(echo "$session_create_body2" | jq -r '.sessionId' 2>/dev/null)
+        if [ -n "$session_id2" ] && [ "$session_id2" != "null" ]; then
+            echo "Session ID: $session_id2"
+        fi
+    else
+        echo -e "${YELLOW}⚠ HTTP $session_create_status2${NC}"
+    fi
+    echo ""
+
+    # 重複セッション番号エラーテスト
+    echo -e "${CYAN}[30] POST /api/classsessions (重複セッション番号エラーテスト)${NC}"
+    duplicate_session_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/classsessions \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"offeringId\": $offering_id,
+        \"sessionNumber\": 1,
+        \"sessionDate\": \"2024-04-10\",
+        \"startTime\": \"13:00:00\",
+        \"endTime\": \"14:30:00\"
+      }")
+
+    duplicate_session_status=$(echo "$duplicate_session_response" | tail -n 1)
+
+    if [ "$duplicate_session_status" = "400" ]; then
+        echo -e "${GREEN}✓ HTTP $duplicate_session_status - 期待通り重複エラーが返されました${NC}"
+    elif [ "$duplicate_session_status" = "201" ] || [ "$duplicate_session_status" = "200" ]; then
+        echo -e "${YELLOW}⚠ HTTP $duplicate_session_status - 重複チェックが機能していない可能性があります${NC}"
+    else
+        echo -e "${YELLOW}⚠ HTTP $duplicate_session_status${NC}"
+    fi
+    echo ""
+
+    # 不正な時刻範囲エラーテスト
+    echo -e "${CYAN}[31] POST /api/classsessions (不正な時刻範囲エラーテスト)${NC}"
+    invalid_time_response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/classsessions \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"offeringId\": $offering_id,
+        \"sessionNumber\": 99,
+        \"sessionDate\": \"2024-04-10\",
+        \"startTime\": \"14:00:00\",
+        \"endTime\": \"13:00:00\"
+      }")
+
+    invalid_time_status=$(echo "$invalid_time_response" | tail -n 1)
+
+    if [ "$invalid_time_status" = "400" ]; then
+        echo -e "${GREEN}✓ HTTP $invalid_time_status - 期待通りバリデーションエラーが返されました${NC}"
+    else
+        echo -e "${YELLOW}⚠ HTTP $invalid_time_status${NC}"
+    fi
+    echo ""
+
+else
+    echo -e "${YELLOW}⚠ CourseOfferingが作成されていないため、ClassSessionテストをスキップします${NC}"
+    echo ""
+fi
+
+# ========================================
 # 完了サマリー
 # ========================================
 echo -e "${BLUE}"
