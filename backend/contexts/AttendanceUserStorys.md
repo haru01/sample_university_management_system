@@ -15,8 +15,8 @@
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
-| CreateClassSessionCommandHandler | CreateClassSessionCommand | 授業セッションを登録 | ⬜ 未実装 |
-| GetClassSessionsByOfferingQueryHandler | GetClassSessionsByOfferingQuery | コース開講の授業セッション一覧を取得 | ⬜ 未実装 |
+| CreateClassSessionCommandHandler | CreateClassSessionCommand | 授業セッションを登録 | ✅ 実装済み |
+| SelectClassSessionsByOfferingQueryHandler | SelectClassSessionsByOfferingQuery | コース開講の授業セッション一覧を取得 | ⬜ 未実装 |
 | GetClassSessionQueryHandler | GetClassSessionQuery | 授業セッション詳細を取得 | ⬜ 未実装 |
 | UpdateClassSessionCommandHandler | UpdateClassSessionCommand | 授業セッション情報を更新 | ⬜ 未実装 |
 | CancelClassSessionCommandHandler | CancelClassSessionCommand | 授業セッションをキャンセル | ⬜ 未実装 |
@@ -137,7 +137,7 @@ Scenario: 学期期間外の日付でセッションを登録しようとする
 **ストーリー:**
 API利用者として、特定のコース開講に紐づく授業セッション一覧を取得できるようにしたい。なぜなら、教員が授業計画を確認したり、学生が授業スケジュールを確認する必要があるから。
 
-**Handler:** `GetClassSessionsByOfferingQueryHandler : IRequestHandler<GetClassSessionsByOfferingQuery, List<ClassSessionDto>>`
+**Handler:** `SelectClassSessionsByOfferingQueryHandler : IRequestHandler<SelectClassSessionsByOfferingQuery, List<ClassSessionDto>>`
 
 **受け入れ条件:**
 
@@ -149,7 +149,7 @@ Scenario: 特定のコース開講の全授業セッションを取得する
     | 1             | 2024-04-10  | 09:00     | 10:30   | Scheduled |
     | 2             | 2024-04-17  | 09:00     | 10:30   | Scheduled |
     | 3             | 2024-04-24  | 09:00     | 10:30   | Cancelled |
-  When GetClassSessionsByOfferingQueryを実行する
+  When SelectClassSessionsByOfferingQueryを実行する
     - OfferingId: 1
   Then 3件のClassSessionDtoが返される
   And SessionDateの昇順でソートされている
@@ -159,7 +159,7 @@ Scenario: 特定のコース開講の全授業セッションを取得する
 Scenario: ステータスでフィルタリングしてセッションを取得する
   Given データベースにOfferingId 1 のCourseOfferingが存在する
   And OfferingId 1 に複数のStatusのClassSessionが存在する
-  When GetClassSessionsByOfferingQueryを実行する
+  When SelectClassSessionsByOfferingQueryを実行する
     - OfferingId: 1
     - StatusFilter: "Scheduled"
   Then Statusが "Scheduled" のClassSessionDtoのみが返される
@@ -169,7 +169,7 @@ Scenario: ステータスでフィルタリングしてセッションを取得�
 Scenario: 日付範囲でフィルタリングしてセッションを取得する
   Given データベースにOfferingId 1 のCourseOfferingが存在する
   And OfferingId 1 に異なる日付のClassSessionが存在する
-  When GetClassSessionsByOfferingQueryを実行する
+  When SelectClassSessionsByOfferingQueryを実行する
     - OfferingId: 1
     - FromDate: 2024-04-15
     - ToDate: 2024-04-30
@@ -180,7 +180,7 @@ Scenario: 日付範囲でフィルタリングしてセッションを取得す�
 Scenario: セッションが1件も登録されていないコース開講
   Given データベースにOfferingId 1 のCourseOfferingが存在する
   And OfferingId 1 にClassSessionが存在しない
-  When GetClassSessionsByOfferingQueryを実行する
+  When SelectClassSessionsByOfferingQueryを実行する
     - OfferingId: 1
   Then 空のリスト（0件）が返される
 ```
