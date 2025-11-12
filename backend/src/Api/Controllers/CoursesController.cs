@@ -39,10 +39,6 @@ public class CoursesController : ControllerBase
     {
         var query = new GetCourseByCodeQuery { CourseCode = code };
         var result = await _mediator.Send(query, cancellationToken);
-
-        if (result == null)
-            return NotFound(new { message = $"Course with code '{code}' not found" });
-
         return Ok(result);
     }
 
