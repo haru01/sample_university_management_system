@@ -12,15 +12,12 @@ public class ClassSessionConfiguration : IEntityTypeConfiguration<ClassSession>
 
         // 主キー (SessionId値オブジェクト)
         builder.HasKey(cs => cs.Id);
-        var idProperty = builder.Property(cs => cs.Id)
+        builder.Property(cs => cs.Id)
             .HasColumnName("session_id")
             .HasConversion(
                 id => id.Value,
                 value => new SessionId(value))
-            .ValueGeneratedOnAdd(); // PostgreSQL SERIAL - データベースで自動生成
-
-        // EF Coreに、このプロパティは挿入時にデータベースで生成されることを明示的に伝える
-        idProperty.Metadata.SetBeforeSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
+            .ValueGeneratedNever(); // 手動で生成
 
         // OfferingId
         builder.Property(cs => cs.OfferingId)

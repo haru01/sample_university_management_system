@@ -57,4 +57,17 @@ public class ClassSessionRepository : IClassSessionRepository
     {
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<SessionId> GetNextSessionIdAsync(CancellationToken cancellationToken = default)
+    {
+        var sessions = await _context.ClassSessions
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var maxId = sessions.Count > 0
+            ? sessions.Max(cs => cs.Id.Value)
+            : 0;
+
+        return new SessionId(maxId + 1);
+    }
 }

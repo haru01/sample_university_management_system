@@ -49,8 +49,12 @@ public class CreateClassSessionCommandHandler : IRequestHandler<CreateClassSessi
         if (existingSession != null)
             throw new InvalidOperationException("Session number already exists for this offering");
 
+        // 次のSessionIdを取得
+        var nextSessionId = await _classSessionRepository.GetNextSessionIdAsync(cancellationToken);
+
         // 授業セッションを作成
         var classSession = ClassSession.Create(
+            nextSessionId,
             request.OfferingId,
             request.SessionNumber,
             request.SessionDate,
@@ -65,16 +69,7 @@ public class CreateClassSessionCommandHandler : IRequestHandler<CreateClassSessi
         await _classSessionRepository.AddAsync(classSession, cancellationToken);
         await _classSessionRepository.SaveChangesAsync(cancellationToken);
 
-        // SaveChanges後、データベースで生成されたIDを取得
-        // OfferingIdとSessionNumberで一意に特定できるため、再検索する
-        var savedSession = await _classSessionRepository.GetByOfferingAndSessionNumberAsync(
-            request.OfferingId,
-            request.SessionNumber,
-            cancellationToken);
-
-        if (savedSession == null)
-            throw new InvalidOperationException("Failed to retrieve saved session");
-
-        return savedSession.Id.Value;
+        // SaveChanges後、エンティティにデータベースで生成されたIDが設定される
+        return classSession.Id.Value;
     }
 }

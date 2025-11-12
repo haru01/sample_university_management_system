@@ -45,9 +45,10 @@ public class ClassSession : AggregateRoot<SessionId>
     }
 
     /// <summary>
-    /// 授業セッションを作成（SessionIdはデータベースで自動生成）
+    /// 授業セッションを作成（SessionIdは手動で生成）
     /// </summary>
     public static ClassSession Create(
+        SessionId sessionId,
         int offeringId,
         int sessionNumber,
         DateOnly sessionDate,
@@ -64,10 +65,8 @@ public class ClassSession : AggregateRoot<SessionId>
         EnsureLocationLength(location);
         EnsureTopicLength(topic);
 
-        // SessionIdはデータベースで自動生成されるため、0を使用
-        // EF Coreが保存時に実際のIDを割り当てます
         return new ClassSession(
-            new SessionId(0),
+            sessionId,
             offeringId,
             sessionNumber,
             sessionDate,

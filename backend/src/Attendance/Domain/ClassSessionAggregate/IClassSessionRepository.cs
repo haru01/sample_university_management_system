@@ -39,4 +39,9 @@ public interface IClassSessionRepository
     /// 変更を保存
     /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 次のSessionIdを取得（手動ID生成用）
+    /// </summary>
+    Task<SessionId> GetNextSessionIdAsync(CancellationToken cancellationToken = default);
 }

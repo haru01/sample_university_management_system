@@ -140,6 +140,7 @@ public class CreateClassSessionCommandHandlerTests : IDisposable
 
         // 既存のセッションを登録
         var existingSession = ClassSession.Create(
+            new SessionId(1),
             1,
             1, // SessionNumber 1
             new DateOnly(2024, 4, 10),
