@@ -7,6 +7,7 @@ using Enrollments.Domain.CourseOfferingAggregate;
 using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Attendance.Tests.Application.Commands.CreateClassSession;
@@ -15,45 +16,61 @@ namespace Attendance.Tests.Application.Commands.CreateClassSession;
 /// CreateClassSessionCommandHandlerのテスト
 /// US-CS01: 授業セッションを登録できる
 /// </summary>
-public class CreateClassSessionCommandHandlerTests : IDisposable
+public class CreateClassSessionCommandHandlerTests : IAsyncLifetime
 {
-    private readonly AttendanceDbContext _attendanceContext;
-    private readonly CoursesDbContext _coursesContext;
-    private readonly CreateClassSessionCommandHandler _handler;
-    private readonly ClassSessionRepository _classSessionRepository;
-    private readonly CourseOfferingRepository _courseOfferingRepository;
-    private readonly SemesterRepository _semesterRepository;
+    private AttendanceDbContext _attendanceContext = null!;
+    private CoursesDbContext _coursesContext = null!;
+    private CreateClassSessionCommandHandler _handler = null!;
+    private SqliteConnection _attendanceConnection = null!;
+    private SqliteConnection _coursesConnection = null!;
 
-    public CreateClassSessionCommandHandlerTests()
+    public async Task InitializeAsync()
     {
-        // 各テストごとに新しいDbContextを作成
+        // SQLite in-memory接続を作成
+        _attendanceConnection = new SqliteConnection("DataSource=:memory:");
+        await _attendanceConnection.OpenAsync();
+
+        _coursesConnection = new SqliteConnection("DataSource=:memory:");
+        await _coursesConnection.OpenAsync();
+
+        // DbContextの初期化
         var attendanceOptions = new DbContextOptionsBuilder<AttendanceDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_attendanceConnection)
             .Options;
 
         var coursesOptions = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_coursesConnection)
             .Options;
 
         _attendanceContext = new AttendanceDbContext(attendanceOptions);
         _coursesContext = new CoursesDbContext(coursesOptions);
 
+        // データベーススキーマを作成
+        await _attendanceContext.Database.EnsureCreatedAsync();
+        await _coursesContext.Database.EnsureCreatedAsync();
+
         // リポジトリの初期化
-        _classSessionRepository = new ClassSessionRepository(_attendanceContext);
-        _courseOfferingRepository = new CourseOfferingRepository(_coursesContext);
-        _semesterRepository = new SemesterRepository(_coursesContext);
+        var classSessionRepository = new ClassSessionRepository(_attendanceContext);
+        var courseOfferingRepository = new CourseOfferingRepository(_coursesContext);
+        var semesterRepository = new SemesterRepository(_coursesContext);
 
         // ハンドラーの初期化
         _handler = new CreateClassSessionCommandHandler(
-            _classSessionRepository,
-            _courseOfferingRepository,
-            _semesterRepository);
+            classSessionRepository,
+            courseOfferingRepository,
+            semesterRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _attendanceContext?.Dispose();
-        _coursesContext?.Dispose();
+        if (_attendanceContext != null)
+            await _attendanceContext.DisposeAsync();
+        if (_coursesContext != null)
+            await _coursesContext.DisposeAsync();
+        if (_attendanceConnection != null)
+            await _attendanceConnection.DisposeAsync();
+        if (_coursesConnection != null)
+            await _coursesConnection.DisposeAsync();
     }
 
     [Fact]
@@ -92,7 +109,7 @@ public class CreateClassSessionCommandHandlerTests : IDisposable
         Assert.True(sessionId > 0);
 
         var savedSession = await _attendanceContext.ClassSessions
-            .FirstOrDefaultAsync(cs => cs.Id.Value == sessionId);
+            .FirstOrDefaultAsync(cs => cs.Id == new SessionId(sessionId));
         Assert.NotNull(savedSession);
         Assert.Equal(1, savedSession.SessionNumber);
         Assert.Equal(new DateOnly(2024, 4, 10), savedSession.SessionDate);
@@ -338,7 +355,7 @@ public class CreateClassSessionCommandHandlerTests : IDisposable
         Assert.True(sessionId > 0);
 
         var savedSession = await _attendanceContext.ClassSessions
-            .FirstOrDefaultAsync(cs => cs.Id.Value == sessionId);
+            .FirstOrDefaultAsync(cs => cs.Id == new SessionId(sessionId));
         Assert.NotNull(savedSession);
         Assert.Null(savedSession.Location);
         Assert.Null(savedSession.Topic);
@@ -376,7 +393,7 @@ public class CreateClassSessionCommandHandlerTests : IDisposable
 
         // Assert
         var savedSession = await _attendanceContext.ClassSessions
-            .FirstOrDefaultAsync(cs => cs.Id.Value == sessionId);
+            .FirstOrDefaultAsync(cs => cs.Id == new SessionId(sessionId));
         Assert.NotNull(savedSession);
         Assert.Equal(SessionStatus.Scheduled, savedSession.Status);
     }
