@@ -9,13 +9,20 @@
 
 **実装パターン:** MediatRを使用したCQRSパターン
 
+**実装進捗サマリー:**
+
+- Phase 1 (授業セッション管理): 1/5 完了 (20%)
+- Phase 2 (出席記録管理): 0/5 未着手 (0%)
+- Phase 3 (出席統計): 0/2 未着手 (0%)
+- **全体進捗: 1/12 完了 (8%)**
+
 ## CommandHandler/QueryHandler一覧
 
-### 授業セッション管理 (Phase 1 - 未実装) → エピック1
+### 授業セッション管理 (Phase 1 - 部分実装) → エピック1
 
 | Handler | Command/Query | 説明 | 実装状態 |
 |---------|--------------|------|----------|
-| CreateClassSessionCommandHandler | CreateClassSessionCommand | 授業セッションを登録 | ⬜ 未実装 |
+| CreateClassSessionCommandHandler | CreateClassSessionCommand | 授業セッションを登録 | ✅ 実装済み |
 | GetClassSessionsByOfferingQueryHandler | GetClassSessionsByOfferingQuery | コース開講の授業セッション一覧を取得 | ⬜ 未実装 |
 | GetClassSessionQueryHandler | GetClassSessionQuery | 授業セッション詳細を取得 | ⬜ 未実装 |
 | UpdateClassSessionCommandHandler | UpdateClassSessionCommand | 授業セッション情報を更新 | ⬜ 未実装 |
@@ -128,7 +135,15 @@ Scenario: 学期期間外の日付でセッションを登録しようとする
 - トピック: オプション、最大200文字
 - 初期ステータス: "Scheduled"
 
-**実装状態:** ⬜ 未実装
+**実装状態:** ✅ 実装済み
+
+**実装詳細:**
+
+- CommandHandler: `CreateClassSessionCommandHandler` 実装済み
+- Controller: `ClassSessionsController.CreateClassSession` (POST /api/classsessions) 実装済み
+- Repository: `ClassSessionRepository` 実装済み
+- Tests: `CreateClassSessionCommandHandlerTests` 実装済み (9テスト、全てパス)
+- Database: Flyway migration (V8__Create_ClassSessions.sql) 実装済み
 
 ---
 
@@ -971,7 +986,7 @@ public class CourseAttendanceBreakdown
 
 **優先順位1: コア機能**
 
-- ⬜ US-CS01: 授業セッションを登録
+- ✅ US-CS01: 授業セッションを登録 **完了**
 - ⬜ US-CS02: 授業セッション一覧を取得
 - ⬜ US-CS03: 授業セッション詳細を取得
 
@@ -981,6 +996,8 @@ public class CourseAttendanceBreakdown
 - ⬜ US-CS05: 授業セッションをキャンセル
 
 **理由**: 出席記録の前提となるセッション情報。コース開講に依存。
+
+**進捗**: 1/5 完了 (20%)
 
 ### Phase 2: 出席記録管理 → エピック2
 
