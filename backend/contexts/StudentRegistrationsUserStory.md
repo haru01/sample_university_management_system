@@ -20,6 +20,25 @@
 | GetStudentQueryHandler | GetStudentQuery | 学生を取得 | ✅ 完了 |
 | UpdateStudentCommandHandler | UpdateStudentCommand | 学生情報を更新 | ✅ 完了 |
 
+### 在籍ステータス履歴管理 (Phase 2 - 予定)
+
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| RecordEnrollmentCommandHandler | RecordEnrollmentCommand | 入学を記録 | ⬜ 未実装 |
+| RecordLeaveOfAbsenceCommandHandler | RecordLeaveOfAbsenceCommand | 休学を記録 | ⬜ 未実装 |
+| RecordReturnFromLeaveCommandHandler | RecordReturnFromLeaveCommand | 復学を記録 | ⬜ 未実装 |
+| RecordGraduationCommandHandler | RecordGraduationCommand | 卒業を記録 | ⬜ 未実装 |
+| RecordWithdrawalCommandHandler | RecordWithdrawalCommand | 退学を記録 | ⬜ 未実装 |
+| GetStudentStatusHistoryQueryHandler | GetStudentStatusHistoryQuery | 学生のステータス履歴を取得 | ⬜ 未実装 |
+| GetCurrentStudentStatusQueryHandler | GetCurrentStudentStatusQuery | 学生の現在のステータスを取得 | ⬜ 未実装 |
+
+### 学年管理 (Phase 3 - 予定)
+
+| Handler | Command/Query | 説明 | 実装状態 |
+|---------|--------------|------|----------|
+| RecordGradeChangeCommandHandler | RecordGradeChangeCommand | 学年変更（進級・留年）を記録 | ⬜ 未実装 |
+| GetGradeChangeHistoryQueryHandler | GetGradeChangeHistoryQuery | 学生の学年変更履歴を取得 | ⬜ 未実装 |
+
 ### 学生イベント管理 (Phase 2 - 未実装)
 
 | Handler | Command/Query | 説明 | 実装状態 |
@@ -38,12 +57,18 @@ TODO: 入学、進級、休学、復学、退学、卒業などの履歴残す�
 
 ## エピック1: 学生在籍管理
 
-### ✅ US-S01: 学生を登録できる
+### ✅ US-S01: 学生を登録できる（入学記録を含む）
 
 **ストーリー:**
-API利用者として、新しい学生をシステムに登録できるようにしたい。なぜなら、学生が履修登録するためにはアカウントが必要だから。
+API利用者として、新しい学生をシステムに登録できるようにしたい。なぜなら、学生が履修登録するためにはアカウントが必要だから。また、学生登録と同時に入学記録も自動的に作成されるべきである。
 
 **Handler:** `CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand, Guid>`
+
+**変更予定（Phase 2）:**
+
+- 入学日（EnrollmentDate）パラメータを追加
+- 学年度（AcademicYear）パラメータを追加
+- 学生作成と同時に入学ステータス履歴（StudentStatusHistory）を自動作成
 
 **受け入れ条件:**
 
@@ -58,6 +83,23 @@ Scenario: 有効な学生情報で新しい学生を登録する
   And データベースに学生が保存されている
   And 学生名が "山田太郎" である
   And メールアドレスが "yamada@example.com" である
+```
+
+```gherkin
+Scenario: 入学日と学年度を指定して学生を登録する（Phase 2で追加）
+  Given データベースが利用可能である
+  When CreateStudentCommandを実行する
+    - Name: "山田太郎"
+    - Email: "yamada@example.com"
+    - Grade: 1
+    - EnrollmentDate: "2024-04-01"
+    - AcademicYear: "2024"
+  Then 自動生成された学生ID（Guid）が返される
+  And データベースに学生が保存されている
+  And 入学ステータス履歴が自動的に作成されている
+  And ステータス履歴のステータスが "Enrolled" である
+  And ステータス履歴の日付が "2024-04-01" である
+  And ステータス履歴の備考に "2024年度入学" が含まれる
 ```
 
 ```gherkin
@@ -99,6 +141,12 @@ Scenario: 不正なメール形式で登録を試みる
 API利用者として、学生情報を更新できるようにしたい。なぜなら、メールアドレスや学年情報が変更になることがあるから。
 
 **Handler:** `UpdateStudentCommandHandler : IRequestHandler<UpdateStudentCommand, Unit>`
+
+**変更予定（Phase 3）:**
+
+- 学年（Grade）の更新機能を廃止予定
+- 学年変更は `RecordGradeChangeCommand` を使用するように変更
+- 名前とメールアドレスの更新のみ対応
 
 **受け入れ条件:**
 
@@ -266,6 +314,527 @@ Scenario: 存在しない学生IDで取得を試みる
 - 存在しない学生の場合はKeyNotFoundException
 
 **実装状態:** ✅ 完了
+
+---
+
+## エピック2: 在籍ステータス履歴管理
+
+### ⬜ US-S05: 入学を記録できる
+
+**ストーリー:**
+API利用者として、学生の入学を記録できるようにしたい。なぜなら、学生がいつ入学したかを正確に記録し、在籍期間を管理する必要があるから。
+
+**Handler:** `RecordEnrollmentCommandHandler : IRequestHandler<RecordEnrollmentCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の入学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生にステータス履歴が存在しない
+  When RecordEnrollmentCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - EnrollmentDate: "2024-04-01"
+    - AcademicYear: "2024"
+    - Note: "令和6年度入学"
+  Then 自動生成されたステータス履歴ID（Guid）が返される
+  And データベースにステータス履歴が保存されている
+  And ステータスが "Enrolled"（在学中）である
+  And 入学日が "2024-04-01" である
+```
+
+```gherkin
+Scenario: 既に在学中の学生に入学を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が既に "Enrolled" ステータスである
+  When RecordEnrollmentCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Student is already enrolled" が含まれる
+```
+
+```gherkin
+Scenario: 存在しない学生IDに入学を記録しようとする
+  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
+  When RecordEnrollmentCommandを実行する
+    - StudentId: "99999999-9999-9999-9999-999999999999"
+  Then KeyNotFoundException がスローされる
+```
+
+**制約:**
+
+- 入学日: 必須
+- 学年度: 必須（例: "2024"）
+- 備考: オプション
+- 学生は同時に複数の入学ステータスを持つことはできない
+- 入学
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S06: 休学を記録できる
+
+**ストーリー:**
+API利用者として、学生の休学を記録できるようにしたい。なぜなら、病気や経済的理由などで一時的に学業を中断する学生を適切に管理する必要があるから。
+
+**Handler:** `RecordLeaveOfAbsenceCommandHandler : IRequestHandler<RecordLeaveOfAbsenceCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 在学中の学生の休学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "Enrolled" ステータスである
+  When RecordLeaveOfAbsenceCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - StartDate: "2024-10-01"
+    - PlannedEndDate: "2025-03-31"
+    - Reason: "病気療養のため"
+  Then 自動生成されたステータス履歴ID（Guid）が返される
+  And データベースにステータス履歴が保存されている
+  And ステータスが "OnLeave"（休学中）である
+  And 開始日が "2024-10-01" である
+  And 予定終了日が "2025-03-31" である
+```
+
+```gherkin
+Scenario: 在学中でない学生の休学を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "Graduated" ステータスである
+  When RecordLeaveOfAbsenceCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Student must be enrolled" が含まれる
+```
+
+```gherkin
+Scenario: 既に休学中の学生に休学を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が既に "OnLeave" ステータスである
+  When RecordLeaveOfAbsenceCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Student is already on leave" が含まれる
+```
+
+**制約:**
+
+- 開始日: 必須
+- 予定終了日: オプション（無期限休学の場合）
+- 理由: オプション
+- 休学できるのは在学中の学生のみ
+- 休学中の学生は二重に休学できない
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S07: 復学を記録できる
+
+**ストーリー:**
+API利用者として、休学中の学生の復学を記録できるようにしたい。なぜなら、休学期間が終了して学業に戻る学生のステータスを適切に管理する必要があるから。
+
+**Handler:** `RecordReturnFromLeaveCommandHandler : IRequestHandler<RecordReturnFromLeaveCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 休学中の学生の復学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "OnLeave" ステータスである
+  When RecordReturnFromLeaveCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - ReturnDate: "2025-04-01"
+    - Note: "病気療養完了により復学"
+  Then 自動生成されたステータス履歴ID（Guid）が返される
+  And データベースにステータス履歴が保存されている
+  And ステータスが "Enrolled"（在学中）に戻る
+  And 復学日が "2025-04-01" である
+```
+
+```gherkin
+Scenario: 休学中でない学生の復学を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "Enrolled" ステータスである
+  When RecordReturnFromLeaveCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Student is not on leave" が含まれる
+```
+
+**制約:**
+
+- 復学日: 必須
+- 備考: オプション
+- 復学できるのは休学中の学生のみ
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S08: 卒業を記録できる
+
+**ストーリー:**
+API利用者として、学生の卒業を記録できるようにしたい。なぜなら、学生が全ての課程を修了して卒業したことを正式に記録する必要があるから。
+
+**Handler:** `RecordGraduationCommandHandler : IRequestHandler<RecordGraduationCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 在学中の学生の卒業を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "Enrolled" ステータスである
+  And その学生の学年が 4 である
+  When RecordGraduationCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - GraduationDate: "2025-03-31"
+    - DegreeType: "Bachelor"
+    - Note: "令和6年度卒業"
+  Then 自動生成されたステータス履歴ID（Guid）が返される
+  And データベースにステータス履歴が保存されている
+  And ステータスが "Graduated"（卒業）である
+  And 卒業日が "2025-03-31" である
+  And 学位種別が "Bachelor" である
+```
+
+```gherkin
+Scenario: 在学中でない学生の卒業を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "OnLeave" ステータスである
+  When RecordGraduationCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Student must be enrolled" が含まれる
+```
+
+```gherkin
+Scenario: 既に卒業済みの学生に卒業を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が既に "Graduated" ステータスである
+  When RecordGraduationCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Student has already graduated" が含まれる
+```
+
+**制約:**
+
+- 卒業日: 必須
+- 学位種別: 必須（Bachelor, Master, Doctorなど）
+- 備考: オプション
+- 卒業できるのは在学中の学生のみ
+- 一度卒業した学生は再度卒業できない
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S09: 退学を記録できる
+
+**ストーリー:**
+API利用者として、学生の退学を記録できるようにしたい。なぜなら、自主退学や除籍など、卒業以外の理由で在籍を終了する学生を適切に記録する必要があるから。
+
+**Handler:** `RecordWithdrawalCommandHandler : IRequestHandler<RecordWithdrawalCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 在学中の学生の退学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "Enrolled" ステータスである
+  When RecordWithdrawalCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - WithdrawalDate: "2024-12-31"
+    - Reason: "自主退学"
+    - Note: "進路変更のため"
+  Then 自動生成されたステータス履歴ID（Guid）が返される
+  And データベースにステータス履歴が保存されている
+  And ステータスが "Withdrawn"（退学）である
+  And 退学日が "2024-12-31" である
+  And 退学理由が "自主退学" である
+```
+
+```gherkin
+Scenario: 休学中の学生の退学を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "OnLeave" ステータスである
+  When RecordWithdrawalCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - WithdrawalDate: "2024-12-31"
+    - Reason: "除籍"
+  Then 自動生成されたステータス履歴ID（Guid）が返される
+  And ステータスが "Withdrawn"（退学）である
+```
+
+```gherkin
+Scenario: 既に卒業済みの学生の退学を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "Graduated" ステータスである
+  When RecordWithdrawalCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Cannot withdraw a graduated student" が含まれる
+```
+
+**制約:**
+
+- 退学日: 必須
+- 退学理由: 必須（自主退学、除籍、懲戒退学など）
+- 備考: オプション
+- 退学できるのは在学中または休学中の学生のみ
+- 卒業済みの学生は退学できない
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S10: 学生のステータス履歴を取得できる
+
+**ストーリー:**
+API利用者として、学生のステータス履歴の一覧を取得できるようにしたい。なぜなら、学生の入学から現在までの在籍状況の変遷を時系列で確認する必要があるから。
+
+**Handler:** `GetStudentStatusHistoryQueryHandler : IRequestHandler<GetStudentStatusHistoryQuery, List<StudentStatusHistoryDto>>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生のステータス履歴を時系列で取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生に以下のステータス履歴が存在する
+    | ステータス | 日付 | 備考 |
+    | Enrolled | 2024-04-01 | 入学 |
+    | OnLeave | 2024-10-01 | 病気療養 |
+    | Enrolled | 2025-04-01 | 復学 |
+  When GetStudentStatusHistoryQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then 3件のStudentStatusHistoryDtoが返される
+  And 履歴が日付の昇順でソートされている
+  And 最初の履歴が "Enrolled" である
+  And 最後の履歴が "Enrolled" である
+```
+
+```gherkin
+Scenario: ステータス履歴がない学生の履歴を取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生にステータス履歴が存在しない
+  When GetStudentStatusHistoryQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then 空のリスト（0件）が返される
+```
+
+```gherkin
+Scenario: 存在しない学生IDの履歴を取得しようとする
+  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
+  When GetStudentStatusHistoryQueryを実行する
+    - StudentId: "99999999-9999-9999-9999-999999999999"
+  Then KeyNotFoundException がスローされる
+```
+
+**制約:**
+
+- デフォルトソート: 日付の昇順（古い順）
+- 全ての履歴を取得（ページネーション未実装）
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S11: 学生の現在のステータスを取得できる
+
+**ストーリー:**
+API利用者として、学生の現在のステータスを取得できるようにしたい。なぜなら、学生が現在在学中か休学中かなどの状態を素早く確認する必要があるから。
+
+**Handler:** `GetCurrentStudentStatusQueryHandler : IRequestHandler<GetCurrentStudentStatusQuery, StudentStatusDto>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の現在のステータスを取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生に以下のステータス履歴が存在する
+    | ステータス | 日付 |
+    | Enrolled | 2024-04-01 |
+    | OnLeave | 2024-10-01 |
+    | Enrolled | 2025-04-01 |
+  When GetCurrentStudentStatusQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then StudentStatusDtoが返される
+  And ステータスが "Enrolled" である
+  And 日付が "2025-04-01" である
+```
+
+```gherkin
+Scenario: ステータス履歴がない学生の現在のステータスを取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生にステータス履歴が存在しない
+  When GetCurrentStudentStatusQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then null が返される
+```
+
+```gherkin
+Scenario: 存在しない学生IDの現在のステータスを取得しようとする
+  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
+  When GetCurrentStudentStatusQueryを実行する
+    - StudentId: "99999999-9999-9999-9999-999999999999"
+  Then KeyNotFoundException がスローされる
+```
+
+**制約:**
+
+- 現在のステータスは履歴の中で最も新しい日付のステータス
+- ステータス履歴がない場合はnullを返す
+
+**実装状態:** ⬜ 未実装
+
+---
+
+## エピック3: 学年管理
+
+### ⬜ US-S12: 学年変更を記録できる
+
+**ストーリー:**
+API利用者として、学生の学年変更（進級・留年）を記録できるようにしたい。なぜなら、学生の進級履歴を追跡し、留年の有無や時期を把握する必要があるから。また、学年の変更履歴を記録することで、学生の学業進捗を正確に管理できる。
+
+**Handler:** `RecordGradeChangeCommandHandler : IRequestHandler<RecordGradeChangeCommand, Guid>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 在学中の学生の進級を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "Enrolled" ステータスである
+  And その学生の現在の学年が 1 である
+  When RecordGradeChangeCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - NewGrade: 2
+    - ChangeDate: "2025-04-01"
+    - ChangeType: "Promotion"
+    - AcademicYear: "2025"
+  Then 自動生成された学年変更履歴ID（Guid）が返される
+  And 学生の学年が 2 に更新される
+  And データベースに学年変更履歴が保存されている
+  And 変更タイプが "Promotion"（進級）である
+  And 変更日が "2025-04-01" である
+```
+
+```gherkin
+Scenario: 在学中の学生の留年を記録する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "Enrolled" ステータスである
+  And その学生の現在の学年が 2 である
+  When RecordGradeChangeCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - NewGrade: 2
+    - ChangeDate: "2025-04-01"
+    - ChangeType: "Retention"
+    - Reason: "必要単位数未取得"
+  Then 自動生成された学年変更履歴ID（Guid）が返される
+  And 学生の学年は 2 のまま（変更なし）
+  And データベースに学年変更履歴が保存されている
+  And 変更タイプが "Retention"（留年）である
+  And 留年理由が "必要単位数未取得" である
+```
+
+```gherkin
+Scenario: 在学中でない学生の学年変更を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生が "OnLeave" ステータスである
+  When RecordGradeChangeCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Student must be enrolled" が含まれる
+```
+
+```gherkin
+Scenario: 不正な学年変更を記録しようとする（2学年以上の飛び級）
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生の現在の学年が 1 である
+  When RecordGradeChangeCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - NewGrade: 3
+    - ChangeType: "Promotion"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Invalid grade change" が含まれる
+```
+
+```gherkin
+Scenario: 降級を記録しようとする
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生の現在の学年が 3 である
+  When RecordGradeChangeCommandを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+    - NewGrade: 2
+    - ChangeType: "Promotion"
+  Then InvalidOperationException がスローされる
+  And エラーメッセージに "Grade cannot be decreased" が含まれる
+```
+
+**制約:**
+
+- 変更日: 必須（通常は学年度開始日の4月1日）
+- 学年変更タイプ: Promotion（進級）、Retention（留年）
+- 学年度: 必須（例: "2025"）
+- 留年理由: 留年の場合は推奨（記録として残す）
+- 学年変更できるのは在学中（Enrolled）の学生のみ
+- 進級は1学年ずつのみ（飛び級不可）
+- 降級は不可
+- 留年の場合は現在の学年と同じ学年を指定
+
+**実装状態:** ⬜ 未実装
+
+---
+
+### ⬜ US-S13: 学生の学年変更履歴を取得できる
+
+**ストーリー:**
+API利用者として、学生の学年変更履歴を取得できるようにしたい。なぜなら、学生の進級・留年の履歴を確認し、学業進捗状況を把握する必要があるから。
+
+**Handler:** `GetGradeChangeHistoryQueryHandler : IRequestHandler<GetGradeChangeHistoryQuery, List<GradeChangeHistoryDto>>`
+
+**受け入れ条件:**
+
+```gherkin
+Scenario: 学生の学年変更履歴を時系列で取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生に以下の学年変更履歴が存在する
+    | 変更前学年 | 変更後学年 | 変更タイプ | 変更日 |
+    | 1 | 2 | Promotion | 2025-04-01 |
+    | 2 | 3 | Promotion | 2026-04-01 |
+    | 3 | 3 | Retention | 2027-04-01 |
+    | 3 | 4 | Promotion | 2028-04-01 |
+  When GetGradeChangeHistoryQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then 4件のGradeChangeHistoryDtoが返される
+  And 履歴が変更日の昇順でソートされている
+  And 3番目の履歴が "Retention"（留年）である
+```
+
+```gherkin
+Scenario: 学年変更履歴がない学生の履歴を取得する
+  Given データベースに学生ID "123e4567-e89b-12d3-a456-426614174000" の学生が登録されている
+  And その学生に学年変更履歴が存在しない
+  When GetGradeChangeHistoryQueryを実行する
+    - StudentId: "123e4567-e89b-12d3-a456-426614174000"
+  Then 空のリスト（0件）が返される
+```
+
+```gherkin
+Scenario: 存在しない学生IDの学年変更履歴を取得しようとする
+  Given データベースに学生ID "99999999-9999-9999-9999-999999999999" の学生が登録されていない
+  When GetGradeChangeHistoryQueryを実行する
+    - StudentId: "99999999-9999-9999-9999-999999999999"
+  Then KeyNotFoundException がスローされる
+```
+
+**制約:**
+
+- デフォルトソート: 変更日の昇順（古い順）
+- 全ての履歴を取得（ページネーション未実装）
+
+**実装状態:** ⬜ 未実装
 
 ---
 
@@ -535,15 +1104,64 @@ Scenario: イベントタイプでフィルタリングして取得する
 - **メールアドレス**: 一意制約、メール形式
 - **学年**: 1〜4
 
-### 学生イベント（StudentEvent）
+### 学生ステータス履歴（StudentStatusHistory）
 
-- **イベントID**: UUID（自動生成）
-- **学生ID**: 必須、外部キー制約（Student集約への参照）
-- **イベントタイプ**: Enrollment（入学）, Promotion（進級）, Leave（休学）, Reinstatement（復学）, Withdrawal（退学）, Graduation（卒業）のいずれか
-- **イベント日時**: 必須
-- **学年**: イベントタイプがEnrollmentまたはPromotionの場合は必須
-- **備考**: オプション、最大500文字
-- **集約関係**: Student集約のルート、StudentEventは子エンティティ（1対多）
+- **履歴ID**: UUID（自動生成）
+- **学生ID**: 必須（外部キー）
+- **ステータス**: Enrolled（在学中）、OnLeave（休学中）、Graduated（卒業）、Withdrawn（退学）
+- **日付**: 必須（そのステータスになった日）
+- **備考**: オプション
+
+### 学年変更履歴（GradeChangeHistory）
+
+- **履歴ID**: UUID（自動生成）
+- **学生ID**: 必須（外部キー）
+- **変更前学年**: 必須（1〜4）
+- **変更後学年**: 必須（1〜4）
+- **変更タイプ**: Promotion（進級）、Retention（留年）
+- **変更日**: 必須（通常は4月1日）
+- **学年度**: 必須（例: "2025"）
+- **理由**: オプション（留年の場合は推奨）
+
+#### ステータス遷移ルール
+
+- **入学（Enrolled）**:
+  - ステータス履歴がない学生のみ可能
+  - 既に在学中の学生は入学できない
+
+- **休学（OnLeave）**:
+  - 在学中（Enrolled）の学生のみ可能
+  - 休学中の学生は二重に休学できない
+  - 予定終了日はオプション
+
+- **復学（Enrolled）**:
+  - 休学中（OnLeave）の学生のみ可能
+
+- **卒業（Graduated）**:
+  - 在学中（Enrolled）の学生のみ可能
+  - 一度卒業した学生は再度卒業できない
+
+- **退学（Withdrawn）**:
+  - 在学中（Enrolled）または休学中（OnLeave）の学生のみ可能
+  - 卒業済み（Graduated）の学生は退学できない
+
+#### 学年変更ルール
+
+- **進級（Promotion）**:
+  - 在学中（Enrolled）の学生のみ可能
+  - 1学年ずつのみ進級可能（飛び級不可）
+  - 例: 1年→2年、2年→3年、3年→4年
+
+- **留年（Retention）**:
+  - 在学中（Enrolled）の学生のみ可能
+  - 現在の学年と同じ学年を指定
+  - 留年理由の記録を推奨
+  - 例: 2年→2年（留年）
+
+- **共通ルール**:
+  - 降級は不可（3年→2年などは禁止）
+  - 休学中・卒業・退学済みの学生は学年変更不可
+  - 変更日は必須（通常は学年度開始日の4月1日）
 
 ---
 
@@ -557,6 +1175,45 @@ Scenario: イベントタイプでフィルタリングして取得する
 - ✅ US-S04: 学生取得（個別学生の在籍情報取得）
 
 **理由**: 最もシンプルで他機能への依存なし。学生の在籍情報管理が全ての履修管理の前提。
+
+### Phase 2: 在籍ステータス履歴管理（予定）
+
+- ⬜ US-S05: 入学記録（学生の入学を記録）
+- ⬜ US-S06: 休学記録（学生の休学を記録）
+- ⬜ US-S07: 復学記録（休学からの復学を記録）
+- ⬜ US-S08: 卒業記録（学生の卒業を記録）
+- ⬜ US-S09: 退学記録（学生の退学を記録）
+- ⬜ US-S10: ステータス履歴取得（学生のステータス変遷を時系列で取得）
+- ⬜ US-S11: 現在のステータス取得（学生の現在の在籍状態を取得）
+
+**理由**: 学生の在籍状態の履歴を管理することで、入学から卒業/退学までのライフサイクルを追跡可能にする。Phase 1の学生基本情報管理の上に構築される。
+
+**実装順序の推奨**:
+
+1. まず入学記録（US-S05）を実装
+2. 次に現在のステータス取得（US-S11）とステータス履歴取得（US-S10）を実装
+3. その後、休学・復学・卒業・退学の各記録機能を実装
+
+### Phase 3: 学年管理（予定）
+
+- ⬜ US-S12: 学年変更記録（進級・留年を記録）
+- ⬜ US-S13: 学年変更履歴取得（学生の進級・留年履歴を取得）
+- 🔄 US-S01: 学生登録機能の拡張（入学日・学年度パラメータ追加、入学記録自動作成）
+- 🔄 US-S02: 学生情報更新機能の変更（学年更新機能を廃止、名前とメールアドレスのみ更新可能に）
+
+**理由**: 学年変更の履歴を記録することで、進級・留年の状況を正確に追跡し、学生の学業進捗を管理できる。Phase 2の在籍ステータス管理と連携して、より詳細な学生ライフサイクル管理を実現する。
+
+**実装順序の推奨**:
+
+1. まず学年変更記録（US-S12）を実装
+2. 次に学年変更履歴取得（US-S13）を実装
+3. US-S01の拡張（入学記録の自動作成）
+4. US-S02の学年更新機能を削除（破壊的変更のため慎重に）
+
+**注意事項**:
+
+- US-S02の変更は破壊的変更のため、既存のAPI利用者への影響を考慮すること
+- US-S01の拡張は後方互換性を保つこと（EnrollmentDateとAcademicYearをオプションパラメータとして追加）
 
 ### Phase 2: 学生イベント履歴管理（未実装）
 
