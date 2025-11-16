@@ -4,34 +4,44 @@ using StudentRegistrations.Infrastructure.Persistence;
 using StudentRegistrations.Infrastructure.Persistence.Repositories;
 using StudentRegistrations.Tests.Builders;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Shared.ValueObjects;
 
 namespace StudentRegistrations.Tests.Application.Commands;
 
 /// <summary>
 /// CreateStudentCommandHandlerのテスト
 /// </summary>
-public class CreateStudentCommandHandlerTests : IDisposable
+public class CreateStudentCommandHandlerTests : IAsyncLifetime
 {
-    private readonly StudentRegistrationsDbContext _context;
-    private readonly CreateStudentCommandHandler _handler;
+    private SqliteConnection _connection;
+    private StudentRegistrationsDbContext _context;
+    private CreateStudentCommandHandler _handler;
 
-    public CreateStudentCommandHandlerTests()
+    public async Task InitializeAsync()
     {
-        // 各テストごとに新しいDbContextを作成
+        // SQLiteのインメモリーデータベースを使用
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<StudentRegistrationsDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new StudentRegistrationsDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         // ハンドラーの依存関係を初期化
         var studentRepository = new StudentRepository(_context);
         _handler = new CreateStudentCommandHandler(studentRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]
@@ -52,7 +62,7 @@ public class CreateStudentCommandHandlerTests : IDisposable
         Assert.NotEqual(Guid.Empty, studentId);
 
         var savedStudent = await _context.Students
-            .FirstOrDefaultAsync(s => s.Id.Value == studentId);
+            .FindAsync(new StudentId(studentId));
         Assert.NotNull(savedStudent);
         Assert.Equal("山田太郎", savedStudent.Name);
         Assert.Equal("yamada@example.com", savedStudent.Email);
@@ -185,7 +195,7 @@ public class CreateStudentCommandHandlerTests : IDisposable
         Assert.NotEqual(Guid.Empty, studentId);
 
         var savedStudent = await _context.Students
-            .FirstOrDefaultAsync(s => s.Id.Value == studentId);
+            .FindAsync(new StudentId(studentId));
         Assert.NotNull(savedStudent);
         Assert.Equal(validEmail, savedStudent.Email);
     }
@@ -212,7 +222,7 @@ public class CreateStudentCommandHandlerTests : IDisposable
         Assert.NotEqual(Guid.Empty, studentId);
 
         var savedStudent = await _context.Students
-            .FirstOrDefaultAsync(s => s.Id.Value == studentId);
+            .FindAsync(new StudentId(studentId));
         Assert.NotNull(savedStudent);
         Assert.Equal(validGrade, savedStudent.Grade);
     }

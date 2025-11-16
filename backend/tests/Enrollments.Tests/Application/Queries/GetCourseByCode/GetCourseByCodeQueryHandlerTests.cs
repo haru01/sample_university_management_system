@@ -3,6 +3,7 @@ using Enrollments.Domain.Exceptions;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enrollments.Tests.Application.Queries;
@@ -10,28 +11,36 @@ namespace Enrollments.Tests.Application.Queries;
 /// <summary>
 /// GetCourseByCodeQueryHandlerのテスト
 /// </summary>
-public class GetCourseByCodeQueryHandlerTests : IDisposable
+public class GetCourseByCodeQueryHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly GetCourseByCodeQueryHandler _handler;
+    private CoursesDbContext _context;
+    private GetCourseByCodeQueryHandler _handler;
+    private SqliteConnection _connection;
 
-    public GetCourseByCodeQueryHandlerTests()
+    public async Task InitializeAsync()
     {
         // 各テストごとに新しいDbContextを作成
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         // ハンドラーの依存関係を初期化
         var courseRepository = new CourseRepository(_context);
         _handler = new GetCourseByCodeQueryHandler(courseRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]

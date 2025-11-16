@@ -1,8 +1,10 @@
 using Enrollments.Application.Commands.CreateCourse;
+using Enrollments.Domain.CourseAggregate;
 using Enrollments.Domain.Exceptions;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enrollments.Tests.Application.Commands;
@@ -10,28 +12,36 @@ namespace Enrollments.Tests.Application.Commands;
 /// <summary>
 /// CreateCourseCommandHandlerのテスト
 /// </summary>
-public class CreateCourseCommandHandlerTests : IDisposable
+public class CreateCourseCommandHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly CreateCourseCommandHandler _handler;
+    private CoursesDbContext _context;
+    private CreateCourseCommandHandler _handler;
+    private SqliteConnection _connection;
 
-    public CreateCourseCommandHandlerTests()
+    public async Task InitializeAsync()
     {
         // 各テストごとに新しいDbContextを作成
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         // Handlerの依存関係を初期化
         var courseRepository = new CourseRepository(_context);
         _handler = new CreateCourseCommandHandler(courseRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]
@@ -54,7 +64,7 @@ public class CreateCourseCommandHandlerTests : IDisposable
         Assert.Equal("CS102", courseId);
 
         var savedCourse = await _context.Courses
-            .FirstOrDefaultAsync(c => c.Id.Value == courseId);
+            .FindAsync(new CourseCode(courseId));
         Assert.NotNull(savedCourse);
         Assert.Equal("データ構造とアルゴリズム", savedCourse.Name);
         Assert.Equal(3, savedCourse.Credits);
@@ -171,7 +181,7 @@ public class CreateCourseCommandHandlerTests : IDisposable
         Assert.Equal("CS106", courseId); // 大文字に正規化される
 
         var savedCourse = await _context.Courses
-            .FirstOrDefaultAsync(c => c.Id.Value == "CS106");
+            .FindAsync(new CourseCode("CS106"));
         Assert.NotNull(savedCourse);
     }
 }

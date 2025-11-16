@@ -60,6 +60,50 @@ const semesters = [
   { year: 2025, period: 'Spring', startDate: '2025-04-01', endDate: '2025-07-31' }
 ];
 
+// コース開講データ (2024 Spring学期)
+const courseOfferings = [
+  { courseCode: 'CS101', year: 2024, period: 'Spring', credits: 3, maxCapacity: 50, instructor: '田中太郎' },
+  { courseCode: 'CS102', year: 2024, period: 'Spring', credits: 4, maxCapacity: 45, instructor: '鈴木花子' },
+  { courseCode: 'MATH101', year: 2024, period: 'Spring', credits: 4, maxCapacity: 60, instructor: '佐藤健' },
+  { courseCode: 'MATH201', year: 2024, period: 'Spring', credits: 3, maxCapacity: 50, instructor: '高橋美咲' },
+  { courseCode: 'ENG101', year: 2024, period: 'Spring', credits: 2, maxCapacity: 30, instructor: 'John Smith' },
+  { courseCode: 'PHYS101', year: 2024, period: 'Spring', credits: 4, maxCapacity: 55, instructor: '山本次郎' }
+];
+
+// 授業セッションデータ (CS101の最初の3回分)
+const classSessions = [
+  {
+    offeringId: null, // 実行時に設定
+    courseCode: 'CS101',
+    sessionNumber: 1,
+    sessionDate: '2024-04-10',
+    startTime: '09:00:00',
+    endTime: '10:30:00',
+    location: 'A棟201教室',
+    topic: 'コンピュータサイエンス入門：概要'
+  },
+  {
+    offeringId: null,
+    courseCode: 'CS101',
+    sessionNumber: 2,
+    sessionDate: '2024-04-17',
+    startTime: '09:00:00',
+    endTime: '10:30:00',
+    location: 'A棟201教室',
+    topic: 'プログラミング基礎：変数とデータ型'
+  },
+  {
+    offeringId: null,
+    courseCode: 'CS101',
+    sessionNumber: 3,
+    sessionDate: '2024-04-24',
+    startTime: '09:00:00',
+    endTime: '10:30:00',
+    location: 'A棟201教室',
+    topic: 'プログラミング基礎：制御構造'
+  }
+];
+
 const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
 function makeRequest(method, path, data = null) {
@@ -168,16 +212,100 @@ async function main() {
   }
   console.log('');
 
-  // 4. サマリー表示
+  // 4. コース開講データ作成
+  console.log('📖 Creating course offerings...\n');
+  const offeringIdMap = {}; // courseCode -> offeringId のマッピング
+
+  for (let i = 0; i < courseOfferings.length; i++) {
+    const offering = courseOfferings[i];
+    const emoji = i < 10 ? numberEmojis[i] : `${i + 1}.`;
+    console.log(`${emoji}  Creating ${offering.courseCode} (${offering.year} ${offering.period})...`);
+
+    try {
+      const result = await makeRequest('POST', '/api/courseofferings', offering);
+      if (result.status === 200 || result.status === 201) {
+        const offeringId = result.data.offeringId || result.data;
+        offeringIdMap[offering.courseCode] = offeringId;
+        console.log(`   ✓ Created successfully - ID: ${offeringId}`);
+      } else if (result.status === 409) {
+        console.log(`   ⚠ Already exists - fetching existing offering...`);
+        // 既存のコース開講を取得
+        try {
+          const getResult = await makeRequest('GET', `/api/courseofferings?year=${offering.year}&period=${offering.period}`);
+          if (getResult.status === 200 && Array.isArray(getResult.data)) {
+            const existingOffering = getResult.data.find(o => o.courseCode === offering.courseCode);
+            if (existingOffering && existingOffering.offeringId) {
+              offeringIdMap[offering.courseCode] = existingOffering.offeringId;
+              console.log(`   ✓ Found existing offering - ID: ${existingOffering.offeringId}`);
+            } else {
+              console.log(`   ⚠ Could not find offering ID in response`);
+            }
+          }
+        } catch (error) {
+          console.error(`   ✗ Error fetching existing offering: ${error.message}`);
+        }
+      } else {
+        console.log(`   ⚠ Status ${result.status}`);
+      }
+    } catch (error) {
+      console.error(`   ✗ Error: ${error.message}`);
+    }
+  }
+  console.log('');
+
+  // 5. 授業セッションデータ作成
+  console.log('🗓️  Creating class sessions...\n');
+
+  for (let i = 0; i < classSessions.length; i++) {
+    const session = classSessions[i];
+    const emoji = i < 10 ? numberEmojis[i] : `${i + 1}.`;
+
+    // offeringIdを設定
+    const offeringId = offeringIdMap[session.courseCode];
+    if (!offeringId) {
+      console.log(`${emoji}  Skipping ${session.courseCode} Session ${session.sessionNumber} - offering not found`);
+      continue;
+    }
+
+    console.log(`${emoji}  Creating ${session.courseCode} Session ${session.sessionNumber}...`);
+
+    try {
+      const sessionData = {
+        offeringId: offeringId,
+        sessionNumber: session.sessionNumber,
+        sessionDate: session.sessionDate,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        location: session.location,
+        topic: session.topic
+      };
+
+      const result = await makeRequest('POST', '/api/classsessions', sessionData);
+      if (result.status === 200 || result.status === 201) {
+        console.log(`   ✓ Created successfully`);
+      } else if (result.status === 409 || result.status === 400) {
+        console.log(`   ⚠ Already exists or validation error (skipping)`);
+      } else {
+        console.log(`   ⚠ Status ${result.status}`);
+      }
+    } catch (error) {
+      console.error(`   ✗ Error: ${error.message}`);
+    }
+  }
+  console.log('');
+
+  // 6. サマリー表示
   console.log('✅ Sample data creation completed!\n');
 
   console.log('📊 Summary:');
-  console.log(`   Semesters: ${semesters.length} items`);
-  console.log(`   Courses:   ${courses.length} items`);
-  console.log(`   Students:  ${students.length} items`);
+  console.log(`   Semesters:        ${semesters.length} items`);
+  console.log(`   Courses:          ${courses.length} items`);
+  console.log(`   Students:         ${students.length} items`);
+  console.log(`   Course Offerings: ${courseOfferings.length} items`);
+  console.log(`   Class Sessions:   ${classSessions.length} items`);
   console.log('');
 
-  // 5. データ一覧取得
+  // 7. データ一覧取得
   console.log('🔍 Fetching created data...\n');
 
   try {

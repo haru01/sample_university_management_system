@@ -4,34 +4,44 @@ using StudentRegistrations.Infrastructure.Persistence;
 using StudentRegistrations.Infrastructure.Persistence.Repositories;
 using StudentRegistrations.Tests.Builders;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Shared.ValueObjects;
 
 namespace StudentRegistrations.Tests.Application.Commands;
 
 /// <summary>
 /// UpdateStudentCommandHandlerのテスト
 /// </summary>
-public class UpdateStudentCommandHandlerTests : IDisposable
+public class UpdateStudentCommandHandlerTests : IAsyncLifetime
 {
-    private readonly StudentRegistrationsDbContext _context;
-    private readonly UpdateStudentCommandHandler _handler;
+    private SqliteConnection _connection;
+    private StudentRegistrationsDbContext _context;
+    private UpdateStudentCommandHandler _handler;
 
-    public UpdateStudentCommandHandlerTests()
+    public async Task InitializeAsync()
     {
-        // 各テストごとに新しいDbContextを作成
+        // SQLiteのインメモリーデータベースを使用
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<StudentRegistrationsDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new StudentRegistrationsDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         // ハンドラーの依存関係を初期化
         var studentRepository = new StudentRepository(_context);
         _handler = new UpdateStudentCommandHandler(studentRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]
@@ -60,7 +70,7 @@ public class UpdateStudentCommandHandlerTests : IDisposable
 
         // Assert
         var updatedStudent = await _context.Students
-            .FirstOrDefaultAsync(s => s.Id.Value == existingStudent.Id.Value);
+            .FindAsync(new StudentId(existingStudent.Id.Value));
         Assert.NotNull(updatedStudent);
         Assert.Equal("山田太郎", updatedStudent.Name);
         Assert.Equal("new@example.com", updatedStudent.Email);
@@ -141,7 +151,7 @@ public class UpdateStudentCommandHandlerTests : IDisposable
 
         // Assert
         var updatedStudent = await _context.Students
-            .FirstOrDefaultAsync(s => s.Id.Value == existingStudent.Id.Value);
+            .FindAsync(new StudentId(existingStudent.Id.Value));
         Assert.NotNull(updatedStudent);
         Assert.Equal("田中太郎", updatedStudent.Name);
         Assert.Equal("yamada@example.com", updatedStudent.Email);

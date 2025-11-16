@@ -7,6 +7,7 @@ using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Shared.ValueObjects;
@@ -16,21 +17,27 @@ namespace Enrollments.Tests.Application.Commands.EnrollStudent;
 /// <summary>
 /// EnrollStudentCommandHandlerのテスト
 /// </summary>
-public class EnrollStudentCommandHandlerTests : IDisposable
+public class EnrollStudentCommandHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly EnrollStudentCommandHandler _handler;
-    private readonly EnrollmentRepository _enrollmentRepository;
-    private readonly CourseOfferingRepository _courseOfferingRepository;
-    private readonly Mock<IStudentServiceClient> _mockStudentServiceClient;
+    private CoursesDbContext _context;
+    private EnrollStudentCommandHandler _handler;
+    private EnrollmentRepository _enrollmentRepository;
+    private CourseOfferingRepository _courseOfferingRepository;
+    private Mock<IStudentServiceClient> _mockStudentServiceClient;
+    private SqliteConnection _connection;
 
-    public EnrollStudentCommandHandlerTests()
+    public async Task InitializeAsync()
     {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
+
         _enrollmentRepository = new EnrollmentRepository(_context);
         _courseOfferingRepository = new CourseOfferingRepository(_context);
         _mockStudentServiceClient = new Mock<IStudentServiceClient>();
@@ -41,9 +48,12 @@ public class EnrollStudentCommandHandlerTests : IDisposable
             _mockStudentServiceClient.Object);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]

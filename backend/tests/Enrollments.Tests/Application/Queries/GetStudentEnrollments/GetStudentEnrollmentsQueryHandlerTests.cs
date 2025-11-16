@@ -9,6 +9,7 @@ using Enrollments.Domain.SemesterAggregate;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Shared.ValueObjects;
@@ -18,22 +19,28 @@ namespace Enrollments.Tests.Application.Queries.GetStudentEnrollments;
 /// <summary>
 /// GetStudentEnrollmentsQueryHandlerのテスト
 /// </summary>
-public class GetStudentEnrollmentsQueryHandlerTests : IDisposable
+public class GetStudentEnrollmentsQueryHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly GetStudentEnrollmentsQueryHandler _handler;
-    private readonly EnrollmentRepository _enrollmentRepository;
-    private readonly CourseOfferingRepository _courseOfferingRepository;
-    private readonly CourseRepository _courseRepository;
-    private readonly Mock<IStudentServiceClient> _mockStudentServiceClient;
+    private CoursesDbContext _context;
+    private GetStudentEnrollmentsQueryHandler _handler;
+    private EnrollmentRepository _enrollmentRepository;
+    private CourseOfferingRepository _courseOfferingRepository;
+    private CourseRepository _courseRepository;
+    private Mock<IStudentServiceClient> _mockStudentServiceClient;
+    private SqliteConnection _connection;
 
-    public GetStudentEnrollmentsQueryHandlerTests()
+    public async Task InitializeAsync()
     {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
+
         _enrollmentRepository = new EnrollmentRepository(_context);
         _courseOfferingRepository = new CourseOfferingRepository(_context);
         _courseRepository = new CourseRepository(_context);
@@ -46,9 +53,12 @@ public class GetStudentEnrollmentsQueryHandlerTests : IDisposable
             _mockStudentServiceClient.Object);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]
@@ -152,28 +162,39 @@ public class GetStudentEnrollmentsQueryHandlerTests : IDisposable
             .ReturnsAsync(studentName);
 
         // コースを作成
-        var course = new CourseBuilder()
+        var course1 = new CourseBuilder()
             .WithCode("CS101")
             .WithName("プログラミング基礎")
             .Build();
-        await _context.Courses.AddAsync(course);
+        var course2 = new CourseBuilder()
+            .WithCode("CS102")
+            .WithName("データ構造")
+            .Build();
+        await _context.Courses.AddRangeAsync(course1, course2);
         await _context.SaveChangesAsync();
 
         // コース開講を作成
-        var courseOffering = new CourseOfferingBuilder()
+        var courseOffering1 = new CourseOfferingBuilder()
+            .WithOfferingId(1)
             .WithCourseCode("CS101")
             .WithSemesterId(2024, "Spring")
             .Build();
-        _courseOfferingRepository.Add(courseOffering);
+        var courseOffering2 = new CourseOfferingBuilder()
+            .WithOfferingId(2)
+            .WithCourseCode("CS102")
+            .WithSemesterId(2024, "Spring")
+            .Build();
+        _courseOfferingRepository.Add(courseOffering1);
+        _courseOfferingRepository.Add(courseOffering2);
         await _courseOfferingRepository.SaveChangesAsync();
 
         // 履修登録を作成（Enrolled）
-        var enrolledEnrollment = Enrollment.Create(studentId, courseOffering.Id, "student-001");
+        var enrolledEnrollment = Enrollment.Create(studentId, courseOffering1.Id, "student-001");
         _enrollmentRepository.Add(enrolledEnrollment);
         await _enrollmentRepository.SaveChangesAsync();
 
         // 履修登録を作成してキャンセル（Cancelled）
-        var cancelledEnrollment = Enrollment.Create(studentId, courseOffering.Id, "student-001");
+        var cancelledEnrollment = Enrollment.Create(studentId, courseOffering2.Id, "student-001");
         cancelledEnrollment.Cancel("student-001", "履修取り消し");
         _enrollmentRepository.Add(cancelledEnrollment);
         await _enrollmentRepository.SaveChangesAsync();

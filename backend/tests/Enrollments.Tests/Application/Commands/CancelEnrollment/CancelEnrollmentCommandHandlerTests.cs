@@ -3,6 +3,7 @@ using Enrollments.Domain.EnrollmentAggregate;
 using Enrollments.Domain.Exceptions;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Shared.ValueObjects;
 
@@ -11,26 +12,35 @@ namespace Enrollments.Tests.Application.Commands.CancelEnrollment;
 /// <summary>
 /// CancelEnrollmentCommandHandlerのテスト
 /// </summary>
-public class CancelEnrollmentCommandHandlerTests : IDisposable
+public class CancelEnrollmentCommandHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly CancelEnrollmentCommandHandler _handler;
-    private readonly EnrollmentRepository _enrollmentRepository;
+    private CoursesDbContext _context;
+    private CancelEnrollmentCommandHandler _handler;
+    private EnrollmentRepository _enrollmentRepository;
+    private SqliteConnection _connection;
 
-    public CancelEnrollmentCommandHandlerTests()
+    public async Task InitializeAsync()
     {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
+
         _enrollmentRepository = new EnrollmentRepository(_context);
         _handler = new CancelEnrollmentCommandHandler(_enrollmentRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]

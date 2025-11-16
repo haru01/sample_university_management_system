@@ -2,6 +2,7 @@ using Enrollments.Application.Queries.SelectSemesters;
 using Enrollments.Infrastructure.Persistence;
 using Enrollments.Infrastructure.Persistence.Repositories;
 using Enrollments.Tests.Builders;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Enrollments.Tests.Application.Queries.SelectSemesters;
@@ -9,26 +10,34 @@ namespace Enrollments.Tests.Application.Queries.SelectSemesters;
 /// <summary>
 /// SelectSemestersQueryHandlerのテスト
 /// </summary>
-public class SelectSemestersQueryHandlerTests : IDisposable
+public class SelectSemestersQueryHandlerTests : IAsyncLifetime
 {
-    private readonly CoursesDbContext _context;
-    private readonly SelectSemestersQueryHandler _handler;
+    private CoursesDbContext _context;
+    private SelectSemestersQueryHandler _handler;
+    private SqliteConnection _connection;
 
-    public SelectSemestersQueryHandlerTests()
+    public async Task InitializeAsync()
     {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
         var options = new DbContextOptionsBuilder<CoursesDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
         _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         var semesterRepository = new SemesterRepository(_context);
         _handler = new SelectSemestersQueryHandler(semesterRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]

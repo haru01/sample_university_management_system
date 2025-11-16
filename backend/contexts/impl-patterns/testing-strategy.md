@@ -4,7 +4,7 @@
 
 1. **Application層を手厚くテスト**
    - CommandHandler/QueryHandlerに対する包括的なテスト
-   - インメモリデータベース（EF Core In-Memory Provider）を使用
+   - SQLiteインメモリデータベースを使用
    - ドメインロジックとリポジトリの統合テスト
 
 2. **Domain層は複雑なロジックのみテスト**
@@ -13,13 +13,14 @@
    - 単純なGetter/Setterや値オブジェクトの生成は不要
 
 3. **テスト独立性の保証**
-   - 各テストメソッドで専用のDbContextインスタンスを生成
+   - IAsyncLifetimeパターンで各テストメソッド専用のDBインスタンスを生成
    - テスト間でデータを共有しない
-   - SetUp/TearDownで明確にコンテキストを管理
+   - InitializeAsync/DisposeAsyncで明確にコンテキストを管理
 
 4. **ビルダーパターンでテストデータを準備**
    - デフォルト値を持つビルダーで簡潔にテストデータを作成
    - テストごとに必要な値のみ上書きして、因果関係を明確に
+   - 複数エンティティが必要な場合は明示的にID/Codeを指定
 
 5. **E2Eテストは実施しない**
    - Application層の統合テストで十分なカバレッジを確保
@@ -30,7 +31,7 @@
 ```text
         ┌─────────────┐
         │  App層      │  多数（メインのテスト）
-        │  統合テスト │  インメモリDBで統合
+        │  統合テスト │  SQLiteインメモリDBで統合
         │             │
         ├─────────────┤
         │  Domain     │  少数（複雑なロジックのみ）
@@ -47,43 +48,46 @@
 - デフォルト値を持ち、引数なしで有効なエンティティを生成できる
 - Fluentインターフェースで必要な値のみ上書き可能
 - テストの可読性を最優先し、因果関係を明確に
+- **複数エンティティ作成時は明示的にID/Codeを指定**
 
 ### ビルダー実装例
 
 ```csharp
 public class StudentBuilder
 {
-    private StudentName _name = new("太郎", "山田");
-    private Email _email = new("taro.yamada@example.com");
-    private int _enrollmentYear = 2024;
-
-    public StudentBuilder WithName(string firstName, string lastName)
-    {
-        _name = new StudentName(firstName, lastName);
-        return this;
-    }
+    private string _email = $"default-{Guid.NewGuid()}@example.com";
+    private string _name = "太郎";
+    private string _familyName = "山田";
+    private int _grade = 1;
 
     public StudentBuilder WithEmail(string email)
     {
-        _email = new Email(email);
+        _email = email;
         return this;
     }
 
-    public StudentBuilder WithEnrollmentYear(int year)
+    public StudentBuilder WithName(string name, string familyName)
     {
-        _enrollmentYear = year;
+        _name = name;
+        _familyName = familyName;
         return this;
     }
 
-    public Student Build() => Student.Create(_name, _email, _enrollmentYear);
+    public StudentBuilder WithGrade(int grade)
+    {
+        _grade = grade;
+        return this;
+    }
+
+    public Student Build() => Student.Create(_email, _name, _familyName, _grade);
 }
 
 public class CourseBuilder
 {
     private CourseCode _code = new("CS101");
     private string _name = "プログラミング入門";
-    private Credits _credits = new(2);
-    private Department _department = new("CS");
+    private int _credits = 2;
+    private int _maxCapacity = 30;
 
     public CourseBuilder WithCode(string code)
     {
@@ -99,38 +103,71 @@ public class CourseBuilder
 
     public CourseBuilder WithCredits(int credits)
     {
-        _credits = new Credits(credits);
+        _credits = credits;
         return this;
     }
 
-    public Course Build() => Course.Create(_code, _name, _credits, _department);
+    public CourseBuilder WithMaxCapacity(int maxCapacity)
+    {
+        _maxCapacity = maxCapacity;
+        return this;
+    }
+
+    public Course Build() => Course.Create(_code, _name, _credits, _maxCapacity);
 }
 
-public class EnrollmentBuilder
+public class CourseOfferingBuilder
 {
-    private StudentId _studentId = new(Guid.NewGuid());
+    private int _offeringId = 1;
     private CourseCode _courseCode = new("CS101");
-    private Semester _semester = new(2024, SemesterPeriod.Spring);
+    private SemesterId _semesterId = new(2024, "Spring");
+    private int _credits = 3;
+    private int _maxCapacity = 30;
+    private string? _instructor = "田中教授";
 
-    public EnrollmentBuilder WithStudentId(StudentId studentId)
+    public CourseOfferingBuilder WithOfferingId(int offeringId)
     {
-        _studentId = studentId;
+        _offeringId = offeringId;
         return this;
     }
 
-    public EnrollmentBuilder WithCourseCode(CourseCode courseCode)
+    public CourseOfferingBuilder WithCourseCode(string courseCode)
     {
-        _courseCode = courseCode;
+        _courseCode = new CourseCode(courseCode);
         return this;
     }
 
-    public EnrollmentBuilder WithSemester(int year, SemesterPeriod period)
+    public CourseOfferingBuilder WithSemesterId(int year, string period)
     {
-        _semester = new Semester(year, period);
+        _semesterId = new SemesterId(year, period);
         return this;
     }
 
-    public Enrollment Build() => Enrollment.Create(_studentId, _courseCode, _semester);
+    public CourseOfferingBuilder WithCredits(int credits)
+    {
+        _credits = credits;
+        return this;
+    }
+
+    public CourseOfferingBuilder WithMaxCapacity(int maxCapacity)
+    {
+        _maxCapacity = maxCapacity;
+        return this;
+    }
+
+    public CourseOfferingBuilder WithInstructor(string? instructor)
+    {
+        _instructor = instructor;
+        return this;
+    }
+
+    public CourseOffering Build() => CourseOffering.Create(
+        new OfferingId(_offeringId),
+        _courseCode,
+        _semesterId,
+        _credits,
+        _maxCapacity,
+        _instructor);
 }
 ```
 
@@ -138,149 +175,98 @@ public class EnrollmentBuilder
 
 ## Application層テスト実装
 
-### 基本方針：ベースクラスを使わないシンプルな設計
+### 基本方針：IAsyncLifetimeパターンによる完全な独立性
 
-各テストクラスで直接DbContextを管理し、継承による暗黙的な依存を排除します。
+各テストメソッドで専用のDBインスタンスを作成し、テスト間の完全な独立性を保証します。
 
 **設計方針:**
 
-- ベースクラスは使わず、各テストクラスで明示的にDbContextを管理
+- IAsyncLifetimeパターンで各テストメソッド専用のDBを作成
+- SQLiteインメモリDBを使用（`:memory:`）
+- SqliteConnectionを明示的に管理し、各テストで新規接続
+- InitializeAsyncでDB初期化、DisposeAsyncでクリーンアップ
 - ビルダーパターンでテストデータを準備し、必要な値のみ上書き
-- 各テストメソッド内でArrangeセクションにテストデータを準備
+- 複数エンティティ作成時は明示的にID/Codeを指定
 - テストの因果関係がメソッド内で完結し、可読性が向上
-- 継承による複雑さを排除
 
 ### CommandHandlerのテスト例
 
 ```csharp
-public class EnrollStudentCommandHandlerTests : IDisposable
+public class CreateStudentCommandHandlerTests : IAsyncLifetime
 {
-    private EnrollmentDbContext _context = null!;
-    private EnrollStudentCommandHandler _handler = null!;
+    private StudentRegistrationsDbContext _context;
+    private CreateStudentCommandHandler _handler;
+    private SqliteConnection _connection;
 
-    public EnrollStudentCommandHandlerTests()
+    public async Task InitializeAsync()
     {
-        // 各テストごとに新しいDbContextを作成
-        var options = new DbContextOptionsBuilder<EnrollmentDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        // 各テストメソッドごとに新しいSQLiteインメモリDBを作成
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<StudentRegistrationsDbContext>()
+            .UseSqlite(_connection)
             .Options;
 
-        _context = new EnrollmentDbContext(options);
+        _context = new StudentRegistrationsDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         // ハンドラーの依存関係を初期化
-        var enrollmentRepository = new EnrollmentRepository(_context);
         var studentRepository = new StudentRepository(_context);
-        var courseRepository = new CourseRepository(_context);
-        var domainService = new EnrollmentDomainService();
-
-        _handler = new EnrollStudentCommandHandler(
-            enrollmentRepository,
-            studentRepository,
-            courseRepository,
-            domainService,
-            _context);
+        _handler = new CreateStudentCommandHandler(studentRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]
-    public async Task 正常な履修登録コマンドで履修登録が作成される()
+    public async Task 正常な学生作成コマンドで学生が作成される()
     {
         // Arrange
-        var student = new StudentBuilder().Build();
-        var course = new CourseBuilder().Build();
-        _context.Students.Add(student);
-        _context.Courses.Add(course);
-        await _context.SaveChangesAsync();
-
-        var command = new EnrollStudentCommand
+        var command = new CreateStudentCommand
         {
-            StudentId = student.Id.Value,
-            CourseCode = course.Code.Value,
-            SemesterYear = 2024,
-            SemesterPeriod = "Spring"
+            Email = "taro.yamada@example.com",
+            Name = "太郎",
+            FamilyName = "山田",
+            Grade = 1
         };
 
         // Act
-        var enrollmentId = await _handler.Handle(command, CancellationToken.None);
+        var studentId = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(enrollmentId);
-        var savedEnrollment = await _context.Enrollments
-            .FirstOrDefaultAsync(e => e.Id == enrollmentId);
-        Assert.NotNull(savedEnrollment);
-        Assert.Equal(student.Id, savedEnrollment!.StudentId);
-        Assert.Equal(course.Code, savedEnrollment.CourseCode);
+        Assert.NotEqual(Guid.Empty, studentId);
+        var savedStudent = await _context.Students
+            .FindAsync(new StudentId(studentId));
+        Assert.NotNull(savedStudent);
+        Assert.Equal("taro.yamada@example.com", savedStudent!.Email);
     }
 
     [Fact]
-    public void 存在しない学生IDでNotFoundExceptionがスローされる()
+    public async Task 重複したメールアドレスでDomainExceptionがスローされる()
     {
         // Arrange
-        var command = new EnrollStudentCommand
-        {
-            StudentId = Guid.NewGuid(), // 存在しない学生ID
-            CourseCode = "CS101",
-            SemesterYear = 2024,
-            SemesterPeriod = "Spring"
-        };
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            async () => await _handler.Handle(command, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task 不正な科目コード形式でArgumentExceptionがスローされる()
-    {
-        // Arrange
-        var student = new StudentBuilder().Build();
-        _context.Students.Add(student);
-        await _context.SaveChangesAsync();
-
-        var command = new EnrollStudentCommand
-        {
-            StudentId = student.Id.Value,
-            CourseCode = "INVALID", // 不正な形式 ← 因果関係が明確
-            SemesterYear = 2024,
-            SemesterPeriod = "Spring"
-        };
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await _handler.Handle(command, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task 重複した履修登録でInvalidOperationExceptionがスローされる()
-    {
-        // Arrange
-        var student = new StudentBuilder().Build();
-        var course = new CourseBuilder().Build();
-        _context.Students.Add(student);
-        _context.Courses.Add(course);
-
-        // 既存の履修登録を作成 ← 因果関係が明確
-        var existingEnrollment = new EnrollmentBuilder()
-            .WithStudentId(student.Id)
-            .WithCourseCode(course.Code)
+        var existingStudent = new StudentBuilder()
+            .WithEmail("duplicate@example.com")
             .Build();
-        _context.Enrollments.Add(existingEnrollment);
+        _context.Students.Add(existingStudent);
         await _context.SaveChangesAsync();
 
-        var command = new EnrollStudentCommand
+        var command = new CreateStudentCommand
         {
-            StudentId = student.Id.Value,
-            CourseCode = course.Code.Value,
-            SemesterYear = 2024,
-            SemesterPeriod = "Spring"
+            Email = "duplicate@example.com", // 重複 ← 因果関係が明確
+            Name = "次郎",
+            FamilyName = "鈴木",
+            Grade = 1
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<DomainException>(
             async () => await _handler.Handle(command, CancellationToken.None));
     }
 }
@@ -289,124 +275,105 @@ public class EnrollStudentCommandHandlerTests : IDisposable
 ### QueryHandlerのテスト例
 
 ```csharp
-public class GetEnrollmentsByStudentQueryHandlerTests : IDisposable
+public class GetStudentEnrollmentsQueryHandlerTests : IAsyncLifetime
 {
-    private EnrollmentDbContext _context = null!;
-    private GetEnrollmentsByStudentQueryHandler _handler = null!;
+    private CoursesDbContext _context;
+    private GetStudentEnrollmentsQueryHandler _handler;
+    private EnrollmentRepository _enrollmentRepository;
+    private CourseOfferingRepository _courseOfferingRepository;
+    private CourseRepository _courseRepository;
+    private Mock<IStudentServiceClient> _mockStudentServiceClient;
+    private SqliteConnection _connection;
 
-    public GetEnrollmentsByStudentQueryHandlerTests()
+    public async Task InitializeAsync()
     {
-        // 各テストごとに新しいDbContextを作成
-        var options = new DbContextOptionsBuilder<EnrollmentDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<CoursesDbContext>()
+            .UseSqlite(_connection)
             .Options;
 
-        _context = new EnrollmentDbContext(options);
-        _handler = new GetEnrollmentsByStudentQueryHandler(_context);
+        _context = new CoursesDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
+
+        _enrollmentRepository = new EnrollmentRepository(_context);
+        _courseOfferingRepository = new CourseOfferingRepository(_context);
+        _courseRepository = new CourseRepository(_context);
+        _mockStudentServiceClient = new Mock<IStudentServiceClient>();
+
+        _handler = new GetStudentEnrollmentsQueryHandler(
+            _enrollmentRepository,
+            _courseOfferingRepository,
+            _courseRepository,
+            _mockStudentServiceClient.Object);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 
     [Fact]
-    public async Task 学生の全ての履修登録が取得できる()
+    public async Task ステータスフィルターで履修登録をフィルタリングする()
     {
         // Arrange
-        var student = new StudentBuilder().Build();
-        var course1 = new CourseBuilder().Build();
+        var studentId = new StudentId(Guid.NewGuid());
+
+        // コースを作成
+        var course1 = new CourseBuilder()
+            .WithCode("CS101")
+            .WithName("プログラミング入門")
+            .Build();
         var course2 = new CourseBuilder()
-            .WithCode("MATH201")
-            .WithName("線形代数")
-            .WithCredits(3)
+            .WithCode("CS102")
+            .WithName("データ構造")
             .Build();
-
-        _context.Students.Add(student);
-        _context.Courses.AddRange(course1, course2);
-
-        var enrollment1 = new EnrollmentBuilder()
-            .WithStudentId(student.Id)
-            .WithCourseCode(course1.Code)
-            .Build();
-        var enrollment2 = new EnrollmentBuilder()
-            .WithStudentId(student.Id)
-            .WithCourseCode(course2.Code)
-            .WithSemester(2024, SemesterPeriod.Fall)
-            .Build();
-        _context.Enrollments.AddRange(enrollment1, enrollment2);
-
+        await _context.Courses.AddRangeAsync(course1, course2);
         await _context.SaveChangesAsync();
 
-        var query = new GetEnrollmentsByStudentQuery
+        // コース開講を作成（複数エンティティなのでIDを明示的に指定）
+        var courseOffering1 = new CourseOfferingBuilder()
+            .WithOfferingId(1)
+            .WithCourseCode("CS101")
+            .WithSemesterId(2024, "Spring")
+            .Build();
+        var courseOffering2 = new CourseOfferingBuilder()
+            .WithOfferingId(2)
+            .WithCourseCode("CS102")
+            .WithSemesterId(2024, "Spring")
+            .Build();
+        _courseOfferingRepository.Add(courseOffering1);
+        _courseOfferingRepository.Add(courseOffering2);
+        await _courseOfferingRepository.SaveChangesAsync();
+
+        // 履修登録を作成（Enrolled）
+        var enrolledEnrollment = Enrollment.Create(studentId, courseOffering1.Id, "student-001");
+        _enrollmentRepository.Add(enrolledEnrollment);
+        await _enrollmentRepository.SaveChangesAsync();
+
+        // 履修登録を作成してキャンセル（Cancelled）
+        var cancelledEnrollment = Enrollment.Create(studentId, courseOffering2.Id, "student-001");
+        cancelledEnrollment.Cancel("student-001", "履修取り消し");
+        _enrollmentRepository.Add(cancelledEnrollment);
+        await _enrollmentRepository.SaveChangesAsync();
+
+        var query = new GetStudentEnrollmentsQuery
         {
-            StudentId = student.Id.Value
+            StudentId = studentId.Value,
+            StatusFilter = "Enrolled"
         };
 
         // Act
-        var results = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(query, default);
 
         // Assert
-        Assert.Equal(2, results.Count);
-        Assert.Equal(new[] { "CS101", "MATH201" }, results.Select(r => r.CourseCode).OrderBy(c => c));
-    }
-
-    [Fact]
-    public async Task ステータスでフィルタリングして履修登録が取得できる()
-    {
-        // Arrange
-        var student = new StudentBuilder().Build();
-        var course1 = new CourseBuilder().Build();
-        var course2 = new CourseBuilder()
-            .WithCode("MATH201")
-            .Build();
-
-        _context.Students.Add(student);
-        _context.Courses.AddRange(course1, course2);
-
-        var enrollment1 = new EnrollmentBuilder()
-            .WithStudentId(student.Id)
-            .WithCourseCode(course1.Code)
-            .Build();
-
-        var enrollment2 = new EnrollmentBuilder()
-            .WithStudentId(student.Id)
-            .WithCourseCode(course2.Code)
-            .Build();
-        enrollment2.Complete(); // 完了状態にする ← 因果関係が明確
-
-        _context.Enrollments.AddRange(enrollment1, enrollment2);
-        await _context.SaveChangesAsync();
-
-        var query = new GetEnrollmentsByStudentQuery
-        {
-            StudentId = student.Id.Value,
-            Status = "Completed" // 完了したもののみ取得 ← 因果関係が明確
-        };
-
-        // Act
-        var results = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.Single(results);
-        Assert.Equal("MATH201", results[0].CourseCode);
-        Assert.Equal("Completed", results[0].Status);
-    }
-
-    [Fact]
-    public async Task 存在しない学生IDで空のリストが返される()
-    {
-        // Arrange
-        var query = new GetEnrollmentsByStudentQuery
-        {
-            StudentId = Guid.NewGuid() // データベースに存在しない学生ID
-        };
-
-        // Act
-        var results = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.Empty(results);
+        Assert.Single(result);
+        Assert.Equal("CS101", result[0].CourseCode);
+        Assert.Equal("Enrolled", result[0].Status);
     }
 }
 ```
@@ -434,105 +401,51 @@ Domain層のユニットテストは、**複雑なロジックのみ**に限定�
 ### Domain層テスト例
 
 ```csharp
-public class EnrollmentDomainServiceTests
-{
-    private EnrollmentDomainService _service;
-
-    public EnrollmentDomainServiceTests()
-    {
-        _service = new EnrollmentDomainService();
-    }
-
-    [Fact]
-    public void 最大単位数を超える場合は履修登録できない()
-    {
-        // Arrange
-        var student = new StudentBuilder().Build();
-        var newCourse = new CourseBuilder()
-            .WithCredits(4) // 4単位の科目
-            .Build();
-
-        // 既に20単位登録済み（上限ギリギリ）
-        var existingEnrollments = new List<Enrollment>
-        {
-            new EnrollmentBuilder()
-                .WithStudentId(student.Id)
-                .Build(), // 2単位（デフォルト）
-            new EnrollmentBuilder()
-                .WithStudentId(student.Id)
-                .Build(), // 2単位（デフォルト）
-            // ... 合計20単位
-        };
-
-        // Act
-        var canEnroll = _service.CanEnroll(student, newCourse, existingEnrollments);
-
-        // Assert - 24単位になるので登録不可
-        Assert.False(canEnroll);
-    }
-
-    [Fact]
-    public void 最大単位数以内の場合は履修登録できる()
-    {
-        // Arrange
-        var student = new StudentBuilder().Build();
-        var newCourse = new CourseBuilder()
-            .WithCredits(2)
-            .Build();
-
-        var existingEnrollments = new List<Enrollment>
-        {
-            new EnrollmentBuilder()
-                .WithStudentId(student.Id)
-                .Build() // 2単位
-        };
-
-        // Act
-        var canEnroll = _service.CanEnroll(student, newCourse, existingEnrollments);
-
-        // Assert - 合計4単位なので登録可能
-        Assert.True(canEnroll);
-    }
-}
-
 public class EnrollmentAggregateTests
 {
     [Fact]
     public void 進行中ステータスから完了ステータスに変更できる()
     {
         // Arrange
-        var enrollment = new EnrollmentBuilder().Build();
-        Assert.Equal("InProgress", enrollment.Status.Value); // 初期状態
+        var studentId = new StudentId(Guid.NewGuid());
+        var offeringId = new OfferingId(1);
+        var enrollment = Enrollment.Create(studentId, offeringId, "student-001");
+        Assert.Equal("Enrolled", enrollment.Status); // 初期状態
 
         // Act
-        enrollment.Complete();
+        enrollment.Complete("student-001", 85);
 
         // Assert
-        Assert.Equal("Completed", enrollment.Status.Value);
+        Assert.Equal("Completed", enrollment.Status);
+        Assert.Equal(85, enrollment.FinalGrade);
     }
 
     [Fact]
-    public void 完了済みステータスから再度完了するとInvalidOperationExceptionがスローされる()
+    public void 完了済みステータスから再度完了するとDomainExceptionがスローされる()
     {
         // Arrange
-        var enrollment = new EnrollmentBuilder().Build();
-        enrollment.Complete(); // 既に完了済み
+        var studentId = new StudentId(Guid.NewGuid());
+        var offeringId = new OfferingId(1);
+        var enrollment = Enrollment.Create(studentId, offeringId, "student-001");
+        enrollment.Complete("student-001", 85); // 既に完了済み
 
         // Act & Assert - 完了済みの履修を再度完了できない
-        Assert.Throws<InvalidOperationException>(() => enrollment.Complete());
+        Assert.Throws<DomainException>(() => enrollment.Complete("student-001", 90));
     }
 
     [Fact]
     public void 進行中ステータスからキャンセルステータスに変更できる()
     {
         // Arrange
-        var enrollment = new EnrollmentBuilder().Build();
+        var studentId = new StudentId(Guid.NewGuid());
+        var offeringId = new OfferingId(1);
+        var enrollment = Enrollment.Create(studentId, offeringId, "student-001");
 
         // Act
-        enrollment.Cancel();
+        enrollment.Cancel("student-001", "履修取り消し");
 
         // Assert
-        Assert.Equal("Cancelled", enrollment.Status.Value);
+        Assert.Equal("Cancelled", enrollment.Status);
     }
 }
 ```
@@ -541,52 +454,90 @@ public class EnrollmentAggregateTests
 
 ## テストのベストプラクティス
 
-### 1. テスト独立性とシンプルな設計
+### 1. テスト独立性とIAsyncLifetimeパターン
 
 ```csharp
-// ✅ 良い例：各テストで新しいDbContextを明示的に作成
-public class EnrollStudentCommandHandlerTests : IDisposable
+// ✅ 良い例：IAsyncLifetimeで各テストメソッド専用のDBを作成
+public class CreateStudentCommandHandlerTests : IAsyncLifetime
 {
-    private EnrollmentDbContext _context = null!;
-    private EnrollStudentCommandHandler _handler = null!;
+    private StudentRegistrationsDbContext _context;
+    private CreateStudentCommandHandler _handler;
+    private SqliteConnection _connection;
 
-    public EnrollStudentCommandHandlerTests()
+    public async Task InitializeAsync()
     {
-        var options = new DbContextOptionsBuilder<EnrollmentDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<StudentRegistrationsDbContext>()
+            .UseSqlite(_connection)
             .Options;
-        _context = new EnrollmentDbContext(options);
+
+        _context = new StudentRegistrationsDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
 
         // 依存関係を明示的に初期化
-        var enrollmentRepository = new EnrollmentRepository(_context);
-        // ... 他の依存関係
-        _handler = new EnrollStudentCommandHandler(enrollmentRepository, ...);
+        var studentRepository = new StudentRepository(_context);
+        _handler = new CreateStudentCommandHandler(studentRepository);
     }
 
-    public void Dispose()
+    public async Task DisposeAsync()
     {
-        _context?.Dispose();
+        if (_context != null)
+            await _context.DisposeAsync();
+        if (_connection != null)
+            await _connection.DisposeAsync();
     }
 }
 
 // ❌ 悪い例：共有のDbContextを使い回す
-private static readonly EnrollmentDbContext SharedContext = ...;
+private static readonly StudentRegistrationsDbContext SharedContext = ...;
 
-// ❌ 悪い例：ベースクラスで暗黙的に初期化（継承の複雑さ）
-public class EnrollStudentCommandHandlerTests : ApplicationTestBase
+// ❌ 悪い例：IDisposableでコンストラクタ初期化（テストメソッド間でDBが共有される）
+public class CreateStudentCommandHandlerTests : IDisposable
 {
-    // base.SetUp()への暗黙的な依存
+    private StudentRegistrationsDbContext _context;
+
+    public CreateStudentCommandHandlerTests()
+    {
+        // この初期化は全テストメソッドで1回だけ実行される
+        _context = new StudentRegistrationsDbContext(options);
+    }
 }
 ```
 
-### 2. AAA パターンの徹底
+### 2. 複数エンティティ作成時のID明示
+
+```csharp
+// ✅ 良い例：複数のCourseOfferingを作成する際、IDを明示的に指定
+var courseOffering1 = new CourseOfferingBuilder()
+    .WithOfferingId(1)  // 明示的にID指定
+    .WithCourseCode("CS101")
+    .Build();
+
+var courseOffering2 = new CourseOfferingBuilder()
+    .WithOfferingId(2)  // 明示的にID指定
+    .WithCourseCode("CS102")
+    .Build();
+
+// ❌ 悪い例：デフォルト値のまま複数作成（UNIQUE制約違反の可能性）
+var courseOffering1 = new CourseOfferingBuilder()
+    .WithCourseCode("CS101")
+    .Build(); // offeringId = 1 (デフォルト)
+
+var courseOffering2 = new CourseOfferingBuilder()
+    .WithCourseCode("CS102")
+    .Build(); // offeringId = 1 (デフォルト) ← UNIQUE制約違反
+```
+
+### 3. AAA パターンの徹底
 
 ```csharp
 [Fact]
-public async Task 正常な履修登録コマンドで履修登録が作成される()
+public async Task 正常な学生作成コマンドで学生が作成される()
 {
     // Arrange: テストデータの準備
-    var command = new EnrollStudentCommand { ... };
+    var command = new CreateStudentCommand { ... };
 
     // Act: 実行
     var result = await _handler.Handle(command, CancellationToken.None);
@@ -596,19 +547,19 @@ public async Task 正常な履修登録コマンドで履修登録が作成さ�
 }
 ```
 
-### 3. テスト名の命名規則
+### 4. テスト名の命名規則
 
 ```text
 日本語で振る舞いを明確に表現
 
 例:
-- 正常な履修登録コマンドで履修登録が作成される
-- 存在しない学生IDでNotFoundExceptionがスローされる
-- 重複した履修登録でEnrollmentDomainExceptionがスローされる
-- 最大単位数を超える場合は履修登録できない
+- 正常な学生作成コマンドで学生が作成される
+- 重複したメールアドレスでDomainExceptionがスローされる
+- ステータスフィルターで履修登録をフィルタリングする
+- 進行中ステータスから完了ステータスに変更できる
 ```
 
-### 4. テストカバレッジの優先順位
+### 5. テストカバレッジの優先順位
 
 - **高**: Application層のCommand/QueryHandler（統合テスト）
 - **中**: 複雑なビジネスロジック（Domain層のユニットテスト）
@@ -616,7 +567,7 @@ public async Task 正常な履修登録コマンドで履修登録が作成さ�
 - **低**: 単純なGetter/Setter、DTOマッピング
 - **最小**: E2Eテストは実施しない（Application層の統合テストで十分）
 
-### 5. ビルダーパターンの活用
+### 6. ビルダーパターンの活用
 
 テストデータビルダーの実装と使用例については、このドキュメントの「[テストデータビルダーパターン](#テストデータビルダーパターン)」セクションを参照してください。
 
@@ -625,6 +576,7 @@ public async Task 正常な履修登録コマンドで履修登録が作成さ�
 - デフォルト値で簡潔にテストデータを作成
 - 必要な値のみ `.WithXxx()` で上書き
 - テストの因果関係が一目で理解できる
+- 複数エンティティ作成時は明示的にID/Codeを指定
 
 ```csharp
 // デフォルト値で作成
@@ -632,8 +584,20 @@ var student = new StudentBuilder().Build();
 
 // 必要な値のみ上書き
 var specialStudent = new StudentBuilder()
+    .WithEmail("hanako.suzuki@example.com")
     .WithName("花子", "鈴木")
-    .WithEnrollmentYear(2023)
+    .WithGrade(2)
+    .Build();
+
+// 複数エンティティ作成時は明示的にID指定
+var offering1 = new CourseOfferingBuilder()
+    .WithOfferingId(1)
+    .WithCourseCode("CS101")
+    .Build();
+
+var offering2 = new CourseOfferingBuilder()
+    .WithOfferingId(2)
+    .WithCourseCode("CS102")
     .Build();
 ```
 
@@ -646,15 +610,40 @@ var specialStudent = new StudentBuilder()
 ```xml
 <ItemGroup>
   <!-- テストフレームワーク -->
-  <PackageReference Include="xunit" Version="2.6.6" />
-  <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6" />
-  <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+  <PackageReference Include="xunit" Version="2.9.3" />
+  <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
 
-  <!-- インメモリDB -->
-  <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
+  <!-- SQLiteインメモリDB -->
+  <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.10" />
+  <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.10" />
 
-  <!-- E2Eテスト用（今回は使用しない） -->
-  <!-- <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" /> -->
+  <!-- カバレッジ -->
+  <PackageReference Include="coverlet.collector" Version="6.0.4" />
+
+  <!-- モック -->
+  <PackageReference Include="Moq" Version="4.20.72" />
+</ItemGroup>
+```
+
+### テスト並列化設定
+
+xunit.runner.json:
+```json
+{
+  "$schema": "https://xunit.net/schema/current/xunit.runner.schema.json",
+  "parallelizeAssembly": true,
+  "parallelizeTestCollections": true,
+  "maxParallelThreads": -1
+}
+```
+
+.csproj:
+```xml
+<ItemGroup>
+  <None Update="xunit.runner.json">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </None>
 </ItemGroup>
 ```
 
@@ -670,12 +659,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -685,9 +674,6 @@ jobs:
 
       - name: Run integration tests
         run: dotnet test --filter "Category=Integration" --logger "trx;LogFileName=integration-tests.trx"
-
-      - name: Run E2E tests
-        run: dotnet test --filter "Category=E2E" --logger "trx;LogFileName=e2e-tests.trx"
 ```
 
 ---
@@ -700,13 +686,13 @@ jobs:
 
 ```csharp
 [Trait("Category", "Unit")]
-public class EnrollmentDomainTests
+public class EnrollmentAggregateTests
 {
     // ドメインロジックの単体テスト
 }
 
 [Trait("Category", "Integration")]
-public class EnrollStudentCommandHandlerTests : IDisposable
+public class CreateStudentCommandHandlerTests : IAsyncLifetime
 {
     // Application層の統合テスト
 }
@@ -724,7 +710,7 @@ dotnet test --filter "Category=Unit"
 dotnet test --filter "Category=Integration"
 
 # 特定のテストクラスのみ実行
-dotnet test --filter "FullyQualifiedName~CreateCourseHandlerTests"
+dotnet test --filter "FullyQualifiedName~CreateStudentCommandHandlerTests"
 
 # 複数カテゴリの組み合わせ
 dotnet test --filter "Category=Unit|Category=Integration"
@@ -738,8 +724,8 @@ dotnet test --filter "Category=Unit|Category=Integration"
 
 1. **ローカル開発中**
    ```bash
-   # 変更した部分のユニットテストのみ実行
-   dotnet test --filter "FullyQualifiedName~EnrollmentTests"
+   # 変更した部分のテストのみ実行
+   dotnet test --filter "FullyQualifiedName~CreateStudentCommandHandlerTests"
    ```
 
 2. **コミット前**
@@ -765,10 +751,34 @@ steps:
   - name: Integration tests
     run: dotnet test --filter "Category=Integration" --no-build
     if: success()
-
-  - name: E2E tests
-    run: dotnet test --filter "Category=E2E" --no-build
-    if: success()
 ```
 
 この戦略により、早い段階で失敗を検出し、CI/CDパイプラインの実行時間を最適化できます。
+
+---
+
+## SQLiteインメモリDBの利点
+
+### EF Core InMemoryProviderからの移行理由
+
+1. **より現実的なテスト環境**
+   - SQLiteは実際のRDBMSに近い動作
+   - 制約（UNIQUE、FOREIGN KEY）が正しく機能
+   - トランザクション動作が現実的
+
+2. **バグの早期発見**
+   - UNIQUE制約違反を検出可能
+   - NULL制約違反を検出可能
+   - SQLクエリの問題を検出可能
+
+3. **本番環境との一貫性**
+   - PostgreSQLとの動作の違いを最小化
+   - スキーマ設定はSQLiteで無視され、PostgreSQLで適用される
+   - マイグレーションと同じスキーマ定義を使用
+
+### SQLite使用時の注意点
+
+- スキーマはSQLiteで無視される（PostgreSQLでのみ使用）
+- テストではスキーマなしでテーブルが作成される
+- 本番環境（PostgreSQL）ではスキーマ付きでテーブルが作成される
+- この違いは問題なく、両環境で正常に動作する
