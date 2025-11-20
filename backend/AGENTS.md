@@ -446,7 +446,7 @@ Enrollments.EnrollStudentCommandHandler
 
 ```text
 backend/
-├── Agent.md                                   # このファイル（全体概要）
+├── Agents.md                                   # このファイル（全体概要）
 └── contexts/
     └── impl-patterns/                         # 詳細パターン集
         ├── architecture-principles.md         # アーキテクチャ原則
