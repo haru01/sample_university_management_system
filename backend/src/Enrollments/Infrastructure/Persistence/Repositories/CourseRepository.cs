@@ -18,6 +18,15 @@ public class CourseRepository : ICourseRepository
             .FirstOrDefaultAsync(c => c.Id == code, cancellationToken);
     }
 
+    public async Task<List<Course>> GetByCodesAsync(IEnumerable<CourseCode> codes, CancellationToken cancellationToken = default)
+    {
+        var codeList = codes.ToList();
+        return await _context.Courses
+            .AsNoTracking()
+            .Where(c => codeList.Contains(c.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<List<Course>> SelectAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Courses

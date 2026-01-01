@@ -14,6 +14,11 @@ public interface ICourseOfferingRepository
     Task<CourseOffering?> GetByIdAsync(OfferingId offeringId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 複数のコース開講を取得（IDリストで）
+    /// </summary>
+    Task<List<CourseOffering>> GetByIdsAsync(IEnumerable<OfferingId> offeringIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 学期ごとのコース開講一覧を取得
     /// </summary>
     Task<List<CourseOffering>> SelectBySemesterAsync(

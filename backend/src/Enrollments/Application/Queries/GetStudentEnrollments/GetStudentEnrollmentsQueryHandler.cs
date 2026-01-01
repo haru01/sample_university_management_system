@@ -61,23 +61,32 @@ public class GetStudentEnrollmentsQueryHandler : IRequestHandler<GetStudentEnrol
         var enrollments = await _enrollmentRepository.SelectByStudentAsync(
             studentId, statusFilter, cancellationToken);
 
+        if (enrollments.Count == 0)
+        {
+            return new List<EnrollmentDto>();
+        }
+
+        // コース開講を一括取得（N+1問題を回避）
+        var offeringIds = enrollments.Select(e => e.OfferingId).Distinct().ToList();
+        var courseOfferings = await _courseOfferingRepository.GetByIdsAsync(offeringIds, cancellationToken);
+        var offeringDict = courseOfferings.ToDictionary(co => co.Id);
+
+        // コース情報を一括取得（N+1問題を回避）
+        var courseCodes = courseOfferings.Select(co => co.CourseCode).Distinct().ToList();
+        var courses = await _courseRepository.GetByCodesAsync(courseCodes, cancellationToken);
+        var courseDict = courses.ToDictionary(c => c.Id);
+
         // コース開講とコース詳細を含むDTOにマッピング
         var enrollmentDtos = new List<EnrollmentDto>();
 
         foreach (var enrollment in enrollments)
         {
-            var courseOffering = await _courseOfferingRepository.GetByIdAsync(
-                enrollment.OfferingId, cancellationToken);
-
-            if (courseOffering == null)
+            if (!offeringDict.TryGetValue(enrollment.OfferingId, out var courseOffering))
             {
                 continue; // コース開講が見つからない場合はスキップ
             }
 
-            var course = await _courseRepository.GetByCodeAsync(
-                courseOffering.CourseCode, cancellationToken);
-
-            if (course == null)
+            if (!courseDict.TryGetValue(courseOffering.CourseCode, out var course))
             {
                 continue; // コースが見つからない場合はスキップ
             }

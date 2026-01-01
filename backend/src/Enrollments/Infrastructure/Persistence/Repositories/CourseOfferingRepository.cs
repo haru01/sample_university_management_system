@@ -20,6 +20,15 @@ public class CourseOfferingRepository : ICourseOfferingRepository
             .FirstOrDefaultAsync(co => co.Id == offeringId, cancellationToken);
     }
 
+    public async Task<List<CourseOffering>> GetByIdsAsync(IEnumerable<OfferingId> offeringIds, CancellationToken cancellationToken = default)
+    {
+        var idList = offeringIds.ToList();
+        return await _context.CourseOfferings
+            .AsNoTracking()
+            .Where(co => idList.Contains(co.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<List<CourseOffering>> SelectBySemesterAsync(
         SemesterId semesterId,
         OfferingStatus? statusFilter = null,

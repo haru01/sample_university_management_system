@@ -44,15 +44,19 @@ public class SelectCourseOfferingsBySemesterQueryHandler
         var courseOfferings = await _courseOfferingRepository.SelectBySemesterAsync(
             semesterId, statusFilter, cancellationToken);
 
-        // CourseOfferingDtoに変換（コースマスタ情報も含める）
-        var dtos = new List<CourseOfferingDto>();
-        foreach (var offering in courseOfferings)
-        {
-            // コースマスタ情報を取得
-            var course = await _courseRepository.GetByCodeAsync(offering.CourseCode, cancellationToken);
-            var courseName = course?.Name ?? "Unknown";
+        // コースマスタ情報を一括取得（N+1問題を回避）
+        var courseCodes = courseOfferings.Select(o => o.CourseCode).Distinct().ToList();
+        var courses = await _courseRepository.GetByCodesAsync(courseCodes, cancellationToken);
+        var courseDict = courses.ToDictionary(c => c.Id);
 
-            dtos.Add(new CourseOfferingDto
+        // CourseOfferingDtoに変換
+        var dtos = courseOfferings.Select(offering =>
+        {
+            var courseName = courseDict.TryGetValue(offering.CourseCode, out var course)
+                ? course.Name
+                : "Unknown";
+
+            return new CourseOfferingDto
             {
                 OfferingId = offering.Id.Value,
                 CourseCode = offering.CourseCode.Value,
@@ -63,8 +67,8 @@ public class SelectCourseOfferingsBySemesterQueryHandler
                 MaxCapacity = offering.MaxCapacity,
                 Instructor = offering.Instructor,
                 Status = offering.Status.ToString()
-            });
-        }
+            };
+        }).ToList();
 
         return dtos;
     }

@@ -6,6 +6,7 @@ namespace Enrollments.Domain.CourseAggregate;
 public interface ICourseRepository
 {
     Task<Course?> GetByCodeAsync(CourseCode code, CancellationToken cancellationToken = default);
+    Task<List<Course>> GetByCodesAsync(IEnumerable<CourseCode> codes, CancellationToken cancellationToken = default);
     Task<List<Course>> SelectAllAsync(CancellationToken cancellationToken = default);
     Task AddAsync(Course course, CancellationToken cancellationToken = default);
 
