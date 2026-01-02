@@ -120,7 +120,7 @@ UniversityManagement/
 - トランザクション管理
 - 例外ハンドリング
 
-### 🧪 [テスト戦略](contexts/impl-patterns/testing-strategy.md)
+### 🧪 [テスト戦略]
 
 - テストピラミッド（Application層中心の統合テスト戦略）
 - インメモリDBを使ったテスト独立性の確保
@@ -205,7 +205,7 @@ public class GlobalExceptionMiddleware
 
 ### テスト方針
 
-詳細なテスト戦略については [テスト戦略ドキュメント](contexts/impl-patterns/testing-strategy.md) を参照してください。
+詳細なテスト戦略については [テスト戦略ドキュメント](.claude/skills/testing-strategy/SKILL.md) を参照してください。
 
 - **Application層を手厚くテスト**: インメモリDBを使った統合テスト
 - **テスト独立性の保証**: 各テストごとに専用のDbContextを生成
@@ -441,17 +441,3 @@ Enrollments.EnrollStudentCommandHandler
 - ✅ 命名規則やコーディング標準に従う
 - ✅ 具体的な実装例を参考にコード生成
 - ✅ DDD、CQRS、レイヤーアーキテクチャの原則を遵守
-
-### ドキュメント構成
-
-```text
-backend/
-├── Agent.md                                   # このファイル（全体概要）
-└── contexts/
-    └── impl-patterns/                         # 詳細パターン集
-        ├── architecture-principles.md         # アーキテクチャ原則
-        ├── domain-layer-patterns.md          # Domain層パターン
-        ├── application-layer-patterns.md     # Application層パターン
-        ├── infrastructure-layer-patterns.md  # Infrastructure層パターン
-        └── testing-strategy.md               # テスト戦略
-```
