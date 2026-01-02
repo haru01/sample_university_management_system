@@ -428,3 +428,65 @@ public class EnrollmentApprovedEventService
 4. **CQRS で読み書き最適化**
    - Commandは厳密な整合性
    - Queryは柔軟性とパフォーマンス優先
+
+---
+
+## グローバルエラーハンドリング（Api層）
+
+ドメイン例外をHTTPレスポンスに変換するミドルウェア。
+
+```csharp
+public class GlobalExceptionMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public GlobalExceptionMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        try
+        {
+            await _next(context);
+        }
+        catch (EnrollmentDomainException ex)
+        {
+            await HandleDomainExceptionAsync(context, ex);
+        }
+    }
+
+    private static async Task HandleDomainExceptionAsync(
+        HttpContext context,
+        EnrollmentDomainException ex)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        context.Response.ContentType = "application/json";
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = ex.Code,
+            message = ex.Message
+        });
+    }
+}
+```
+
+---
+
+## 注意事項
+
+1. **トランザクション境界**
+   - EntityFrameworkのDbContextが自動的にトランザクションを管理
+   - SaveChangesAsync()呼び出し時に全ての変更が1トランザクションで実行
+   - 複数集約の更新は避ける
+
+2. **パフォーマンス**
+   - Query側では生SQLやストアドプロシージャも許容
+   - N+1問題に注意（Include使用）
+   - AsNoTracking()を活用してRead専用クエリを最適化
+
+3. **セキュリティ**
+   - 全APIエンドポイントに認証・認可
+   - 入力値は必ずバリデーション
