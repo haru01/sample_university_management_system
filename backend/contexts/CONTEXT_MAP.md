@@ -409,4 +409,4 @@ LEFT JOIN student_registrations.students s ON e.student_id = s.id;
 
 - [AGENTS.md](../AGENTS.md) - プロジェクト全体構造
 - [REFACTORING_PLAN.md](../REFACTORING_PLAN.md) - コンテキスト分離のリファクタリング計画
-- [architecture-principles.md](impl-patterns/architecture-principles.md) - アーキテクチャ原則
+- [CQRS+DDD実装パターン](../.claude/skills/cqrs-ddd/SKILL.md) - アーキテクチャ・各層パターン

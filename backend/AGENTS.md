@@ -90,53 +90,33 @@ UniversityManagement/
 │
 ├── AGENTS.md                          # このファイル
 ├── REFACTORING_PLAN.md               # リファクタリング計画書
-└── contexts/
-    ├── CONTEXT_MAP.md                # コンテキストマップ
-    └── impl-patterns/                # 実装パターン集
+├── contexts/
+│   └── CONTEXT_MAP.md                # コンテキストマップ
+└── .claude/skills/                    # 実装パターンSkills
+    ├── cqrs-ddd/                      # CQRS+DDD実装パターン
+    ├── testing-strategy/
+    └── slow-query-detector/
 ```
 
 ## アーキテクチャ設計原則
 
-詳細なアーキテクチャ原則と設計パターンについては、以下のドキュメントを参照してください：
+詳細なアーキテクチャ原則と設計パターンについては、以下のSkillsを参照してください：
 
-### 📐 [アーキテクチャ原則](contexts/impl-patterns/architecture-principles.md)
+### 📐 [CQRS+DDD 実装パターン](.claude/skills/cqrs-ddd/SKILL.md)
+
 - 境界づけられたコンテキスト（Bounded Context）
 - レイヤーアーキテクチャと依存関係
-- 集約設計ルール
-- CQRS パターン
+- 集約設計ルール / CQRS パターン
+- エンティティ / 集約ルート / 値オブジェクト
+- Command/Query Handler（MediatR）
+- DbContext / Entity Configuration / リポジトリ実装
 
-### 🏛️ [Domain層 実装パターン](contexts/impl-patterns/domain-layer-patterns.md)
-- エンティティ / 集約ルート
-- 値オブジェクト（Value Objects）
-- リポジトリインターフェース
-- ドメインサービス
-- ドメインイベント
-- ドメイン例外
-
-### ⚙️ [Application層 実装パターン](contexts/impl-patterns/application-layer-patterns.md)
-
-- Command/Query インターフェース（CQRS）
-- CommandHandler / QueryHandler（MediatR）
-- トランザクション管理
-- 例外ハンドリング
-
-### 🧪 [テスト戦略]
+### 🧪 [テスト戦略](.claude/skills/testing-strategy/SKILL.md)
 
 - テストピラミッド（Application層中心の統合テスト戦略）
 - インメモリDBを使ったテスト独立性の確保
 - CommandHandler/QueryHandlerのテストパターン
-- E2Eテストの最小化戦略
 - テストデータビルダーパターン
-- CI/CDでのテスト実行
-
-### 🗄️ [Infrastructure層 実装パターン](contexts/impl-patterns/infrastructure-layer-patterns.md)
-
-- DbContext（Unit of Work）
-- Entity Configuration（Fluent API）
-- リポジトリ実装
-- 依存性注入の設定
-- マイグレーション
-- 外部サービス統合
 
 ## 開発ガイドライン
 
@@ -319,7 +299,7 @@ npm run restart
 
 新しいマイグレーションファイルを追加した後は `npm run restart` で自動的に適用されます。
 
-詳細は [Infrastructure層パターン - マイグレーション](contexts/infrastructure-layer-patterns.md#マイグレーションflyway) を参照。
+詳細は [Infrastructure層パターン - マイグレーション](.claude/skills/cqrs-ddd/references/infrastructure-layer.md#マイグレーションflyway) を参照。
 
 ### アプリケーション実行
 

@@ -1305,4 +1305,4 @@ Scenario: 存在しない履修登録IDで完了を試みる
 
 ## テスト実装戦略
 
-詳細は [testing-strategy.md](impl-patterns/testing-strategy.md) を参照してください。
+詳細は [testing-strategy](../.claude/skills/testing-strategy/SKILL.md) を参照してください。

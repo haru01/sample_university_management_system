@@ -134,7 +134,7 @@ TDDの Refactor フェーズや、準備リファクタリングがこれに該�
 
 - **[AGENTS.md](../../AGENTS.md)** - 全体概要、実装チェックリスト
 - **[contexts/CONTEXT_MAP.md](../../contexts/CONTEXT_MAP.md)** - コンテキスト境界、ACL統合パターン
-- **[contexts/impl-patterns/](../../contexts/impl-patterns/)** - アーキテクチャ原則、各層の実装パターン、テスト戦略
+- **[.claude/skills/](../../.claude/skills/)** - アーキテクチャ原則、各層の実装パターン、テスト戦略
 
 ### 境界づけられたコンテキスト（最重要）
 

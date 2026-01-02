@@ -1231,4 +1231,4 @@ Scenario: イベントタイプでフィルタリングして取得する
 
 ## テスト実装戦略
 
-詳細は [testing-strategy.md](impl-patterns/testing-strategy.md) を参照してください。
+詳細は [testing-strategy](../.claude/skills/testing-strategy/SKILL.md) を参照してください。

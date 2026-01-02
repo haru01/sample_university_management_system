@@ -42,7 +42,7 @@ description: 'Analyze chat logs and enhance AI agent autonomy through context en
 以下のパターンを識別する：
 
 #### 成功パターン (期待結果A)
-- ✅ 適切なコンテキスト参照（AGENTS.md, impl-patterns/の活用）
+- ✅ 適切なコンテキスト参照（AGENTS.md, .claude/skills/の活用）
 - ✅ 段階的な実装アプローチ（TodoWrite による計画管理）
 - ✅ エラーハンドリングと再試行の適切な実行
 - ✅ テストやビルドコマンドによる検証
@@ -74,7 +74,7 @@ description: 'Analyze chat logs and enhance AI agent autonomy through context en
 
 #### コンテキスト活用度
 - [ ] AGENTS.md の参照有無と適切な理解
-- [ ] impl-patterns/ の実装パターン準拠
+- [ ] .claude/skills/ の実装パターン準拠
 - [ ] ユーザーストーリー（UserStorys.md）との整合性
 - [ ] 既存コードの調査・理解度
 
@@ -99,7 +99,7 @@ description: 'Analyze chat logs and enhance AI agent autonomy through context en
 
 #### コンテキスト強化
 - 不足していたドキュメント参照の追加
-- AGENTS.md や impl-patterns/ への新規情報追記
+- AGENTS.md や .claude/skills/ への新規情報追記
 - MCP設定の最適化
 
 #### プロンプト改善

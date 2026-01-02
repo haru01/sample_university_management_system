@@ -178,11 +178,8 @@ curl http://localhost:8080/api/courses/CS101
 詳細な設計パターンと実装ガイドラインは以下を参照：
 
 - [AGENTS.md](AGENTS.md) - プロジェクト全体概要・コマンドリファレンス
-- [contexts/impl-patterns/architecture-principles.md](contexts/impl-patterns/architecture-principles.md) - アーキテクチャ原則
-- [contexts/impl-patterns/domain-layer-patterns.md](contexts/impl-patterns/domain-layer-patterns.md) - Domain層パターン
-- [contexts/impl-patterns/application-layer-patterns.md](contexts/impl-patterns/application-layer-patterns.md) - Application層パターン
-- [contexts/impl-patterns/infrastructure-layer-patterns.md](contexts/impl-patterns/infrastructure-layer-patterns.md) - Infrastructure層パターン
-- [contexts/impl-patterns/testing-strategy.md](contexts/impl-patterns/testing-strategy.md) - テスト戦略
+- [.claude/skills/cqrs-ddd/SKILL.md](.claude/skills/cqrs-ddd/SKILL.md) - CQRS+DDD実装パターン
+- [.claude/skills/testing-strategy/SKILL.md](.claude/skills/testing-strategy/SKILL.md) - テスト戦略
 
 ## 技術スタック
 
